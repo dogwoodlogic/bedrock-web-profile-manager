@@ -3,13 +3,11 @@
  */
 'use strict';
 
-import {AccountMasterKey} from 'bedrock-web-kms';
+import {ControllerKey} from 'web-kms-client';
 import {DataHub, DataHubService} from 'bedrock-web-data-hub';
 import uuid from 'uuid-random';
 import DataHubCache from './DataHubCache.js';
 import {generateDid, storeDidDocument} from './did.js';
-
-const kmsPlugin = 'ssm-v1';
 
 export default class ProfileManager {
   /**
@@ -19,16 +17,25 @@ export default class ProfileManager {
    *
    * @param {Object} options - The options to use.
    * @param {Object} options.session - A `bedrock-web-session` session instance.
-   * @param {string} options.kmsPlugin - The KMS plugin to use.
+   * @param {string} options.kmsModule - The KMS module to use to generate keys.
+   * @param {string} options.kmsBaseUrl - The base URL for the KMS service,
+   *   used to generate keys.
    *
    * @returns {ProfileManager} - The new instance.
    */
-  constructor({kmsPlugin}) {
+  constructor({kmsModule, kmsBaseUrl}) {
+    if(typeof kmsModule !== 'string') {
+      throw new TypeError('"kmsModule" must be a string.');
+    }
+    if(typeof kmsBaseUrl !== 'string') {
+      throw new TypeError('"kmsBaseUrl" must be a string.');
+    }
     this.session = null;
     this.accountId = null;
-    this.masterKey = null;
+    this.controllerKey = null;
     this.dataHubCache = new DataHubCache();
-    this.kmsPlugin = kmsPlugin;
+    this.kmsModule = kmsModule;
+    this.kmsBaseUrl = kmsBaseUrl;
   }
 
   /**
@@ -78,15 +85,15 @@ export default class ProfileManager {
       id: profile.dataHub
     });
     const [kek, hmac] = await Promise.all([
-      this.masterKey.getKek({id: config.kek.id}),
-      this.masterKey.getHmac({id: config.hmac.id})
+      this.controllerKey.getKek({id: config.kek.id}),
+      this.controllerKey.getHmac({id: config.hmac.id})
     ]);
     dataHub = new DataHub({config, kek, hmac});
     await this.dataHubCache.set(id, dataHub);
     return dataHub;
   }
 
-  async createProfile({type, ...rest}) {
+  async createProfile({type, content}) {
     // generate a DID for the profile
     const {did, keyPair} = await generateDid();
 
@@ -108,7 +115,7 @@ export default class ProfileManager {
     const doc = {
       id: uuid(),
       content: {
-        ...rest,
+        ...content,
         id: did,
         type: profileType,
         dataHub: profileDataHub.config.id
@@ -149,24 +156,25 @@ export default class ProfileManager {
 
     // clear cache
     if(this.accountId && this.accountId !== newAccountId) {
-      await AccountMasterKey.clearCache({accountId: this.accountId});
+      await ControllerKey.clearCache({handle: this.accountId});
       await this.dataHubCache.clear();
     }
 
     // update state
     this.accountId = newAccountId;
-    this.masterKey = null;
+    this.controllerKey = null;
 
     if(!(authentication || newData.account)) {
       // no account in session, return
       return;
     }
 
-    // cache account master key
+    // cache account controller key
     const {secret} = (authentication || {});
-    this.masterKey = await AccountMasterKey.fromCache(
-      {kmsPlugin, accountId: this.accountId, secret});
-    if(this.masterKey === null) {
+    this.controllerKey = await (secret ?
+      ControllerKey.fromSecret({secret, handle: this.accountId}) :
+      ControllerKey.fromCache({handle: this.accountId}));
+    if(this.controllerKey === null) {
       // could not load from cache and no `secret`, so cannot load data hub
       return;
     }
@@ -178,19 +186,21 @@ export default class ProfileManager {
 
   async _createDataHub({primary = false} = {}) {
     // create KEK and HMAC keys for data hub config
-    const {masterKey} = this;
+    const {controllerKey, kmsModule} = this;
+    const kekId = this._generateKmsKeyId();
+    const hmacId = this._generateKmsKeyId();
     const [kek, hmac] = await Promise.all([
-      masterKey.generateKey({type: 'kek'}),
-      masterKey.generateKey({type: 'hmac'})
+      controllerKey.generateKey({id: kekId, type: 'kek', kmsModule}),
+      controllerKey.generateKey({id: hmacId, type: 'hmac', kmsModule})
     ]);
 
     // create data hub
     const dhs = new DataHubService();
     let config = {
       sequence: 0,
-      // TODO: need to support using a DID here for profile controlled
-      // data hubs as well
-      controller: masterKey.accountId,
+      // TODO: need to change this to support using a profile ID as
+      // `controller` for profile controlled data hubs
+      controller: controllerKey.handle,
       kek: {id: kek.id, algorithm: kek.algorithm},
       hmac: {id: hmac.id, algorithm: hmac.algorithm}
     };
@@ -202,16 +212,20 @@ export default class ProfileManager {
   }
 
   async _ensureDataHub() {
-    const {masterKey} = this;
+    const {controllerKey} = this;
     const dhs = new DataHubService();
-    const config = await dhs.getPrimary({controller: masterKey.accountId});
+    const config = await dhs.getPrimary({controller: controllerKey.handle});
     if(config === null) {
       return await this._createDataHub({primary: true});
     }
     const [kek, hmac] = await Promise.all([
-      masterKey.getKek({id: config.kek.id}),
-      masterKey.getHmac({id: config.hmac.id})
+      controllerKey.getKek({id: config.kek.id}),
+      controllerKey.getHmac({id: config.hmac.id})
     ]);
     return new DataHub({config, kek, hmac});
+  }
+
+  _generateKmsKeyId() {
+    return `${this.kmsBaseUrl}/${uuid()}`;
   }
 }
