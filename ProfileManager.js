@@ -4,9 +4,9 @@
 'use strict';
 
 import {ControllerKey} from 'web-kms-client';
-import {DataHub, DataHubService} from 'bedrock-web-data-hub';
+import {DataHubClient} from 'secure-data-hub-client';
 import uuid from 'uuid-random';
-import DataHubCache from './DataHubCache.js';
+import DataHubClientCache from './DataHubClientCache.js';
 import {generateDid, storeDidDocument} from './did.js';
 
 export default class ProfileManager {
@@ -33,7 +33,7 @@ export default class ProfileManager {
     this.session = null;
     this.accountId = null;
     this.controllerKey = null;
-    this.dataHubCache = new DataHubCache();
+    this.dataHubCache = new DataHubClientCache();
     this.kmsModule = kmsModule;
     this.kmsBaseUrl = kmsBaseUrl;
   }
@@ -71,7 +71,9 @@ export default class ProfileManager {
     }
 
     const accountDataHub = await this.getAccountDataHub();
-    const [doc] = await accountDataHub.find({equals: {id: profileId}});
+    const [doc] = await accountDataHub.find({
+      equals: {'content.id': profileId}
+    });
     if(!doc) {
       // no such profile stored with the given account
       return null;
@@ -79,16 +81,14 @@ export default class ProfileManager {
 
     // get the profile data hub
     const {content: profile} = doc;
-    const dhs = new DataHubService();
-    const config = await dhs.get({
-      controller: this.accountId,
-      id: profile.dataHub
-    });
+    // TODO: pass `capability` for accessing profile datahub config
+    const config = await DataHubClient.getConfig({id: profile.dataHub});
     const [kek, hmac] = await Promise.all([
-      this.controllerKey.getKek({id: config.kek.id}),
-      this.controllerKey.getHmac({id: config.hmac.id})
+      // TODO: pass `capability` for invoking kek and hmac operations
+      this.controllerKey.getKek({id: config.kek.id, type: config.kek.type}),
+      this.controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
-    dataHub = new DataHub({config, kek, hmac});
+    dataHub = new DataHubClient({id: config.id, kek, hmac});
     await this.dataHubCache.set(id, dataHub);
     return dataHub;
   }
@@ -118,7 +118,8 @@ export default class ProfileManager {
         ...content,
         id: did,
         type: profileType,
-        dataHub: profileDataHub.config.id
+        // TODO: might need this to be the specific document -- or a zcap
+        dataHub: profileDataHub.id
       }
     };
     await accountDataHub.insert({doc});
@@ -137,7 +138,9 @@ export default class ProfileManager {
     if(!dataHub) {
       return null;
     }
-    const [doc = null] = await dataHub.find({equals: {id: profileId}});
+    const [doc = null] = await dataHub.find({
+      equals: {'content.id': profileId}
+    });
     return doc;
   }
 
@@ -147,7 +150,7 @@ export default class ProfileManager {
       return [];
     }
     return dataHub.find({
-      equals: {type: 'Profile'}
+      equals: {'content.type': 'Profile'}
     });
   }
 
@@ -184,7 +187,7 @@ export default class ProfileManager {
     await this.dataHubCache.set('primary', dataHub);
   }
 
-  async _createDataHub({primary = false} = {}) {
+  async _createDataHub({referenceId} = {}) {
     // create KEK and HMAC keys for data hub config
     const {controllerKey, kmsModule} = this;
     const kekId = this._generateKmsKeyId();
@@ -195,34 +198,33 @@ export default class ProfileManager {
     ]);
 
     // create data hub
-    const dhs = new DataHubService();
     let config = {
       sequence: 0,
       // TODO: need to change this to support using a profile ID as
       // `controller` for profile controlled data hubs
       controller: controllerKey.handle,
-      kek: {id: kek.id, algorithm: kek.algorithm},
-      hmac: {id: hmac.id, algorithm: hmac.algorithm}
+      kek: {id: kek.id, type: kek.type},
+      hmac: {id: hmac.id, type: hmac.type}
     };
-    if(primary) {
-      config.primary = true;
+    if(referenceId) {
+      config.referenceId = referenceId;
     }
-    config = await dhs.create({config});
-    return new DataHub({config, kek, hmac});
+    config = await DataHubClient.createDataHub({config});
+    return new DataHubClient({id: config.id, kek, hmac});
   }
 
   async _ensureDataHub() {
     const {controllerKey} = this;
-    const dhs = new DataHubService();
-    const config = await dhs.getPrimary({controller: controllerKey.handle});
+    const config = await DataHubClient.findConfig(
+      {controller: controllerKey.handle, referenceId: 'primary'});
     if(config === null) {
-      return await this._createDataHub({primary: true});
+      return await this._createDataHub({referenceId: 'primary'});
     }
     const [kek, hmac] = await Promise.all([
-      controllerKey.getKek({id: config.kek.id}),
-      controllerKey.getHmac({id: config.hmac.id})
+      controllerKey.getKek({id: config.kek.id, type: config.kek.type}),
+      controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
-    return new DataHub({config, kek, hmac});
+    return new DataHubClient({id: config.id, kek, hmac});
   }
 
   _generateKmsKeyId() {

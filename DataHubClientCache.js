@@ -3,16 +3,16 @@
  */
 'use strict';
 
-export default class DataHubCache {
+export default class DataHubClientCache {
   constructor() {
     this.cache = new Map();
   }
 
-  async set(id, dataHub) {
-    dataHub.ensureIndex({attribute: 'id', unique: true});
-    dataHub.ensureIndex({attribute: 'type'});
-    this.cache.set(id, dataHub);
-    return dataHub;
+  async set(id, client) {
+    client.ensureIndex({attribute: 'content.id', unique: true});
+    client.ensureIndex({attribute: 'content.type'});
+    this.cache.set(id, client);
+    return client;
   }
 
   async get(id) {
