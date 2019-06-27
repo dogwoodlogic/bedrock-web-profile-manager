@@ -71,8 +71,10 @@ export default class ProfileManager {
     }
 
     const accountDataHub = await this.getAccountDataHub();
+    const {controllerKey: invocationSigner} = this;
     const [doc] = await accountDataHub.find({
-      equals: {'content.id': profileId}
+      equals: {'content.id': profileId},
+      invocationSigner
     });
     if(!doc) {
       // no such profile stored with the given account
@@ -122,7 +124,8 @@ export default class ProfileManager {
         dataHub: profileDataHub.id
       }
     };
-    await accountDataHub.insert({doc});
+    const {controllerKey: invocationSigner} = this;
+    await accountDataHub.insert({doc, invocationSigner});
 
     // cache the profile data hub and store the unregistered DID document in it
     await this.dataHubCache.set(`profile.${did}`, profileDataHub);
@@ -138,8 +141,10 @@ export default class ProfileManager {
     if(!dataHub) {
       return null;
     }
+    const {controllerKey: invocationSigner} = this;
     const [doc = null] = await dataHub.find({
-      equals: {'content.id': profileId}
+      equals: {'content.id': profileId},
+      invocationSigner
     });
     return doc;
   }
@@ -149,8 +154,10 @@ export default class ProfileManager {
     if(!dataHub) {
       return [];
     }
+    const {controllerKey: invocationSigner} = this;
     return dataHub.find({
-      equals: {'content.type': 'Profile'}
+      equals: {'content.type': 'Profile'},
+      invocationSigner
     });
   }
 
@@ -200,9 +207,11 @@ export default class ProfileManager {
     // create data hub
     let config = {
       sequence: 0,
-      // TODO: need to change this to support using a profile ID as
-      // `controller` for profile controlled data hubs
       controller: controllerKey.handle,
+      // TODO: add `invoker` and `delegator` using controllerKey.id *or*, if
+      // this is a profile's data hub, the profile ID
+      invoker: controllerKey.id,
+      delegator: controllerKey.id,
       kek: {id: kek.id, type: kek.type},
       hmac: {id: hmac.id, type: hmac.type}
     };
