@@ -129,7 +129,8 @@ export default class ProfileManager {
 
     // cache the profile data hub and store the unregistered DID document in it
     await this.dataHubCache.set(`profile.${did}`, profileDataHub);
-    await storeDidDocument({dataHub: profileDataHub, keyPair});
+    await storeDidDocument(
+      {dataHub: profileDataHub, keyPair, invocationSigner});
 
     return doc;
   }

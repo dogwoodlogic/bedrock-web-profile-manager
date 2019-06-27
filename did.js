@@ -3,7 +3,7 @@
  */
 'use strict';
 
-import {Store as DidStore} from 'bedrock-web-did-store';
+import {DidStore} from 'bedrock-web-did-store';
 import {LDKeyPair} from 'crypto-ld';
 import didv1 from 'did-veres-one';
 
@@ -20,8 +20,8 @@ export async function generateDid() {
   };
 }
 
-export async function storeDidDocument({dataHub, keyPair}) {
-  const didStore = new DidStore({dataHub});
+export async function storeDidDocument({dataHub, keyPair, invocationSigner}) {
+  const didStore = new DidStore({dataHub, invocationSigner});
   // don't store private keys with the DID Document (use KMS instead)
   const keyStore = {
     get: () => {},
