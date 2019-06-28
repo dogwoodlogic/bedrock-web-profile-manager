@@ -12,6 +12,8 @@
     "bedrock-web-store": "^1.2.0",
     "crypto-ld": "^3.4.0",
     "did-veres-one": "veres-one/did-veres-one#fix-browser-support",
+    "jsonld-signatures": "^4.1.1",
+    "ocapld": "digitalbazaar/ocapld.js#master",
     "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#add-meta-support",
     "uuid-random": "^1.0.7",
     "web-kms-client": "digitalbazaar/web-kms-client#ocap-refactor"

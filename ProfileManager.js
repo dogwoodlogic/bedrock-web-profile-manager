@@ -3,11 +3,16 @@
  */
 'use strict';
 
+import {CapabilityDelegation} from 'ocapld';
 import {ControllerKey} from 'web-kms-client';
 import {DataHubClient} from 'secure-data-hub-client';
+import jsigs from 'jsonld-signatures';
 import uuid from 'uuid-random';
 import DataHubClientCache from './DataHubClientCache.js';
 import {generateDid, storeDidDocument} from './did.js';
+
+const {SECURITY_CONTEXT_V2_URL, sign, suites} = jsigs;
+const {Ed25519Signature2018} = suites;
 
 export default class ProfileManager {
   /**
@@ -162,6 +167,79 @@ export default class ProfileManager {
     });
   }
 
+  async delegateCapability({profileId, request}) {
+    const {invocationTarget, invoker, referenceId, allowedAction, caveat} =
+      request;
+    if(!(invocationTarget && typeof invocationTarget === 'object' &&
+      invocationTarget.type)) {
+      throw new TypeError(
+        '"invocationTarget" must be an object that includes a "type".');
+    }
+
+    const dataHub = await this.getProfileDataHub({profileId});
+
+    // TODO: to reduce correlation between the account and multiple profiles,
+    // consider generating a unique controller key per profile DID, but consider
+    // the additional overhead for password replacement
+    const {controllerKey: signer} = this;
+
+    let zcap = {
+      '@context': SECURITY_CONTEXT_V2_URL,
+      // TODO: use 128-bit random multibase encoded value instead of uuid
+      id: 'urn:zcap:' + uuid(),
+      invoker
+    };
+    if(referenceId) {
+      zcap.referenceId = referenceId;
+    }
+    if(allowedAction) {
+      zcap.allowedAction = allowedAction;
+    }
+    if(caveat) {
+      zcap.caveat = caveat;
+    }
+    const {id: target, type: targetType} = invocationTarget;
+    if(targetType === 'Ed25519VerificationKey2018') {
+      if(!target) {
+        throw new TypeError(
+          '"invocationTarget.id" must be set for Web KMS capabilities.');
+      }
+      // TODO: fetch `target` from a key mapping document in the profile's
+      // data hub to get public key ID to set as `referenceId`
+      zcap.invocationTarget = {
+        id: target,
+        type: targetType,
+        // TODO: put public key ID here
+        //referenceId:
+      };
+      zcap.parentCapability = target;
+      zcap = await _delegate({zcap, signer});
+
+      // TODO: enable zcap via KmsClient
+      // await kmsClient.enableCapability(
+      //   {capabilityToEnable: zcap, invocationSigner: signer});
+    } else if(targetType === 'urn:datahub:document') {
+      zcap.invocationTarget = {
+        id: target,
+        type: targetType
+      };
+
+      if(!target) {
+        // TODO: use 128-bit random multibase encoded value instead of uuid
+        zcap.invocationTarget.id = `${dataHub.id}/documents/${uuid()}`;
+      }
+      zcap.parentCapability = zcap.invocationTarget.id;
+      zcap = await _delegate({zcap, signer});
+
+      // enable zcap via dataHub client
+      await dataHub.enableCapability(
+        {capabilityToEnable: zcap, invocationSigner: signer});
+    } else {
+      throw new Error(`Unsupported invocation target type "${targetType}".`);
+    }
+    return zcap;
+  }
+
   async _sessionChanged({authentication, newData}) {
     const newAccountId = (newData.account || {}).id || null;
 
@@ -240,4 +318,19 @@ export default class ProfileManager {
   _generateKmsKeyId() {
     return `${this.kmsBaseUrl}/${uuid()}`;
   }
+}
+
+async function _delegate({zcap, signer}) {
+  // attach capability delegation proof
+  return sign(zcap, {
+    // TODO: map `signer.type` to signature suite
+    suite: new Ed25519Signature2018({
+      signer,
+      verificationMethod: signer.id
+    }),
+    purpose: new CapabilityDelegation({
+      capabilityChain: [zcap.parentCapability]
+    }),
+    compactProof: false
+  });
 }
