@@ -155,16 +155,20 @@ export default class ProfileManager {
     return doc;
   }
 
-  async getProfiles() {
+  async getProfiles({type} = {}) {
     const dataHub = await this.getAccountDataHub();
     if(!dataHub) {
       return [];
     }
     const {controllerKey: invocationSigner} = this;
-    return dataHub.find({
+    const profileDocs = await dataHub.find({
       equals: {'content.type': 'Profile'},
       invocationSigner
     });
+    if(!type) {
+      return profileDocs;
+    }
+    return profileDocs.filter(({content}) => content.type.includes(type));
   }
 
   async delegateCapability({profileId, request}) {
