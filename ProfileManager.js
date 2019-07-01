@@ -88,10 +88,8 @@ export default class ProfileManager {
 
     // get the profile data hub
     const {content: profile} = doc;
-    // TODO: pass `capability` for accessing profile datahub config
     const config = await DataHubClient.getConfig({id: profile.dataHub});
     const [kek, hmac] = await Promise.all([
-      // TODO: pass `capability` for invoking kek and hmac operations
       this.controllerKey.getKek({id: config.kek.id, type: config.kek.type}),
       this.controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
