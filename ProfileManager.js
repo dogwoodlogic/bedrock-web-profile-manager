@@ -170,8 +170,9 @@ export default class ProfileManager {
   }
 
   async delegateCapability({profileId, request}) {
-    const {invocationTarget, invoker, referenceId, allowedAction, caveat} =
-      request;
+    const {
+      invocationTarget, invoker, referenceId, allowedAction, caveat
+    } = request;
     if(!(invocationTarget && typeof invocationTarget === 'object' &&
       invocationTarget.type)) {
       throw new TypeError(
@@ -200,6 +201,7 @@ export default class ProfileManager {
     if(caveat) {
       zcap.caveat = caveat;
     }
+    let {parentCapability} = request;
     const {id: target, type: targetType} = invocationTarget;
     if(targetType === 'Ed25519VerificationKey2018') {
       if(!target) {
@@ -214,7 +216,7 @@ export default class ProfileManager {
         // TODO: put public key ID here
         //referenceId:
       };
-      zcap.parentCapability = target;
+      zcap.parentCapability = parentCapability || target;
       zcap = await _delegate({zcap, signer});
 
       // TODO: enable zcap via KmsClient
@@ -230,7 +232,12 @@ export default class ProfileManager {
         // TODO: use 128-bit random multibase encoded value instead of uuid
         zcap.invocationTarget.id = `${dataHub.id}/documents/${uuid()}`;
       }
-      zcap.parentCapability = zcap.invocationTarget.id;
+      if(!parentCapability) {
+        const idx = zcap.invocationTarget.id.lastIndexOf('/');
+        const docId = zcap.invocationTarget.id.substr(idx + 1);
+        parentCapability = `${dataHub.id}/zcaps/documents/${docId}`;
+      }
+      zcap.parentCapability = parentCapability;
       zcap = await _delegate({zcap, signer});
 
       // enable zcap via dataHub client
