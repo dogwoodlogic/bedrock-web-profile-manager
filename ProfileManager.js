@@ -331,7 +331,7 @@ export default class ProfileManager {
   async _createKeystore({referenceId} = {}) {
     const {controllerKey} = this;
 
-    // create data hub
+    // create keystore
     const config = {
       sequence: 0,
       controller: controllerKey.id,
