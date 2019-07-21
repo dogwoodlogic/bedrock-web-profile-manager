@@ -7,6 +7,7 @@
     "generate-readme": "jsdoc2md -t template.hbs *.js > README.md"
   },
   "dependencies": {
+    "axios": "^0.18.0",
     "bedrock-web-did-store": "digitalbazaar/bedrock-web-did-store#initial",
     "bedrock-web-session": "^1.2.0",
     "bedrock-web-store": "^1.2.0",

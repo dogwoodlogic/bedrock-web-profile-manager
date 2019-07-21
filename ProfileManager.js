@@ -3,6 +3,7 @@
  */
 'use strict';
 
+import axios from 'axios';
 import {CapabilityDelegation} from 'ocapld';
 import {ControllerKey, KmsClient} from 'web-kms-client';
 import {DataHubClient} from 'secure-data-hub-client';
@@ -13,6 +14,8 @@ import {generateDid, storeDidDocument} from './did.js';
 
 const {SECURITY_CONTEXT_V2_URL, sign, suites} = jsigs;
 const {Ed25519Signature2018} = suites;
+
+const DEFAULT_HEADERS = {Accept: 'application/ld+json, application/json'};
 
 export default class ProfileManager {
   /**
@@ -89,11 +92,13 @@ export default class ProfileManager {
     // get the profile data hub
     const {content: profile} = doc;
     const config = await DataHubClient.getConfig({id: profile.dataHub});
-    const [kek, hmac] = await Promise.all([
-      this.controllerKey.getKek({id: config.kek.id, type: config.kek.type}),
+    const [keyAgreementKey, hmac] = await Promise.all([
+      this.controllerKey.getKeyAgreementKey(
+        {id: config.keyAgreementKey.id, type: config.keyAgreementKey.type}),
       this.controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
-    dataHub = new DataHubClient({id: config.id, kek, hmac});
+    dataHub = new DataHubClient(
+      {id: config.id, keyResolver, keyAgreementKey, hmac});
     await this.dataHubCache.set(id, dataHub);
     return dataHub;
   }
@@ -289,10 +294,10 @@ export default class ProfileManager {
   }
 
   async _createDataHub({referenceId} = {}) {
-    // create KEK and HMAC keys for data hub config
+    // create KAK and HMAC keys for data hub config
     const {controllerKey, kmsModule} = this;
-    const [kek, hmac] = await Promise.all([
-      controllerKey.generateKey({type: 'kek', kmsModule}),
+    const [keyAgreementKey, hmac] = await Promise.all([
+      controllerKey.generateKey({type: 'keyAgreement', kmsModule}),
       controllerKey.generateKey({type: 'hmac', kmsModule})
     ]);
 
@@ -304,14 +309,15 @@ export default class ProfileManager {
       // this is a profile's data hub, the profile ID
       invoker: controllerKey.id,
       delegator: controllerKey.id,
-      kek: {id: kek.id, type: kek.type},
+      keyAgreementKey: {id: keyAgreementKey.id, type: keyAgreementKey.type},
       hmac: {id: hmac.id, type: hmac.type}
     };
     if(referenceId) {
       config.referenceId = referenceId;
     }
     config = await DataHubClient.createDataHub({config});
-    return new DataHubClient({id: config.id, kek, hmac});
+    return new DataHubClient(
+      {id: config.id, keyResolver, keyAgreementKey, hmac});
   }
 
   async _ensureDataHub() {
@@ -321,11 +327,13 @@ export default class ProfileManager {
     if(config === null) {
       return await this._createDataHub({referenceId: 'primary'});
     }
-    const [kek, hmac] = await Promise.all([
-      controllerKey.getKek({id: config.kek.id, type: config.kek.type}),
+    const [keyAgreementKey, hmac] = await Promise.all([
+      controllerKey.getKeyAgreementKey(
+        {id: config.keyAgreementKey.id, type: config.keyAgreementKey.type}),
       controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
-    return new DataHubClient({id: config.id, kek, hmac});
+    return new DataHubClient(
+      {id: config.id, keyResolver, keyAgreementKey, hmac});
   }
 
   async _createKeystore({referenceId} = {}) {
@@ -380,4 +388,12 @@ async function _delegate({zcap, signer}) {
     }),
     compactProof: false
   });
+}
+
+// FIXME: make more restrictive, support `did:key` and `did:v1`
+async function keyResolver({id}) {
+  const response = await axios.get(id, {
+    headers: DEFAULT_HEADERS
+  });
+  return response.data;
 }
