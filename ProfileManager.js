@@ -233,11 +233,31 @@ export default class ProfileManager {
         type: targetType
       };
 
-      if(!target) {
+      if(target) {
+        // TODO: handle case where an existing target is requested
+      } else {
         // TODO: use 128-bit random multibase encoded value instead of uuid
-        zcap.invocationTarget.id = `${dataHub.id}/documents/${uuid()}`;
-        // TODO: create document and include ECDH public key so user
-        // can decrypt their own data
+        const docId = uuid();
+        zcap.invocationTarget.id = `${dataHub.id}/documents/${docId}`;
+        // insert empty doc to establish self as a recipient
+        const doc = {
+          id: docId,
+          content: {}
+        };
+        const {controllerKey: invocationSigner} = this;
+        // TODO: this is not clean; zcap query needs work! ... another
+        // option is to get a `keyAgreement` verification method from
+        // the controller of the `invoker`
+        const recipients = [{
+          header: {
+            kid: dataHub.keyAgreementKey.id,
+            alg: 'ECDH-ES+A256KW'
+          }
+        }];
+        if(invocationTarget.recipient) {
+          recipients.push(invocationTarget.recipient);
+        }
+        await dataHub.insert({doc, recipients, invocationSigner});
       }
       if(!parentCapability) {
         const idx = zcap.invocationTarget.id.lastIndexOf('/');
