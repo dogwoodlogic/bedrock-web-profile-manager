@@ -13,10 +13,10 @@
     "crypto-ld": "^3.4.0",
     "did-veres-one": "veres-one/did-veres-one#fix-browser-support",
     "jsonld-signatures": "^4.1.1",
-    "ocapld": "^1.2.1",
+    "ocapld": "^1.3.0",
     "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#initial",
     "uuid-random": "^1.0.7",
-    "web-kms-client": "digitalbazaar/web-kms-client#initial"
+    "web-kms-client": "digitalbazaar/web-kms-client#http-sig"
   },
   "repository": {
     "type": "git",

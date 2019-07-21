@@ -4,7 +4,7 @@
 'use strict';
 
 import {CapabilityDelegation} from 'ocapld';
-import {ControllerKey} from 'web-kms-client';
+import {ControllerKey, KmsClient} from 'web-kms-client';
 import {DataHubClient} from 'secure-data-hub-client';
 import jsigs from 'jsonld-signatures';
 import uuid from 'uuid-random';
@@ -182,9 +182,10 @@ export default class ProfileManager {
     const dataHub = await this.getProfileDataHub({profileId});
 
     // TODO: to reduce correlation between the account and multiple profiles,
-    // consider generating a unique controller key per profile DID, but consider
-    // the additional overhead for password replacement
-    const {controllerKey: signer} = this;
+    // consider generating a unique controller key per profile DID, but
+    // consider the additional overhead for password replacement
+    const {controllerKey} = this;
+    const signer = controllerKey;
 
     let zcap = {
       '@context': SECURITY_CONTEXT_V2_URL,
@@ -219,9 +220,8 @@ export default class ProfileManager {
       zcap.parentCapability = parentCapability || target;
       zcap = await _delegate({zcap, signer});
 
-      // TODO: enable zcap via KmsClient
-      // await kmsClient.enableCapability(
-      //   {capabilityToEnable: zcap, invocationSigner: signer});
+      await controllerKey.kmsClient.enableCapability(
+        {capabilityToEnable: zcap, invocationSigner: signer});
     } else if(targetType === 'urn:datahub:document') {
       zcap.invocationTarget = {
         id: target,
@@ -231,6 +231,8 @@ export default class ProfileManager {
       if(!target) {
         // TODO: use 128-bit random multibase encoded value instead of uuid
         zcap.invocationTarget.id = `${dataHub.id}/documents/${uuid()}`;
+        // TODO: create document and include ECDH public key so user
+        // can decrypt their own data
       }
       if(!parentCapability) {
         const idx = zcap.invocationTarget.id.lastIndexOf('/');
@@ -269,13 +271,17 @@ export default class ProfileManager {
 
     // cache account controller key
     const {secret} = (authentication || {});
+    const kmsClient = new KmsClient();
     this.controllerKey = await (secret ?
-      ControllerKey.fromSecret({secret, handle: this.accountId}) :
-      ControllerKey.fromCache({handle: this.accountId}));
+      ControllerKey.fromSecret({secret, handle: this.accountId, kmsClient}) :
+      ControllerKey.fromCache({handle: this.accountId, kmsClient}));
     if(this.controllerKey === null) {
       // could not load from cache and no `secret`, so cannot load data hub
       return;
     }
+
+    // ensure primary keystore exists for controller key
+    await this._ensureKeystore();
 
     // ensure the account's primary data hub exists and cache it
     const dataHub = await this._ensureDataHub();
@@ -285,11 +291,9 @@ export default class ProfileManager {
   async _createDataHub({referenceId} = {}) {
     // create KEK and HMAC keys for data hub config
     const {controllerKey, kmsModule} = this;
-    const kekId = this._generateKmsKeyId();
-    const hmacId = this._generateKmsKeyId();
     const [kek, hmac] = await Promise.all([
-      controllerKey.generateKey({id: kekId, type: 'kek', kmsModule}),
-      controllerKey.generateKey({id: hmacId, type: 'hmac', kmsModule})
+      controllerKey.generateKey({type: 'kek', kmsModule}),
+      controllerKey.generateKey({type: 'hmac', kmsModule})
     ]);
 
     // create data hub
@@ -324,8 +328,42 @@ export default class ProfileManager {
     return new DataHubClient({id: config.id, kek, hmac});
   }
 
-  _generateKmsKeyId() {
-    return `${this.kmsBaseUrl}/${uuid()}`;
+  async _createKeystore({referenceId} = {}) {
+    const {controllerKey} = this;
+
+    // create data hub
+    const config = {
+      sequence: 0,
+      controller: controllerKey.id,
+      // TODO: add `invoker` and `delegator` using arrays including
+      // controllerKey.id *and* identifier for backup key recovery entity
+      invoker: controllerKey.id,
+      delegator: controllerKey.id
+    };
+    if(referenceId) {
+      config.referenceId = referenceId;
+    }
+    return await KmsClient.createKeystore({
+      url: `${this.kmsBaseUrl}/keystores`,
+      config
+    });
+  }
+
+  async _ensureKeystore() {
+    const {controllerKey} = this;
+    let config = await KmsClient.findKeystore({
+      url: `${this.kmsBaseUrl}/keystores`,
+      controller: controllerKey.id,
+      referenceId: 'primary'
+    });
+    if(config === null) {
+      config = await this._createKeystore({referenceId: 'primary'});
+    }
+    if(config === null) {
+      return null;
+    }
+    controllerKey.kmsClient.keystore = config.id;
+    return config;
   }
 }
 
