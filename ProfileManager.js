@@ -8,7 +8,6 @@ import {CapabilityDelegation} from 'ocapld';
 import {ControllerKey, KmsClient} from 'web-kms-client';
 import {DataHubClient} from 'secure-data-hub-client';
 import jsigs from 'jsonld-signatures';
-import uuid from 'uuid-random';
 import DataHubClientCache from './DataHubClientCache.js';
 import {generateDid, storeDidDocument} from './did.js';
 
@@ -123,7 +122,6 @@ export default class ProfileManager {
       profileType = [profileType, type];
     }
     const doc = {
-      id: uuid(),
       content: {
         ...content,
         id: did,
@@ -194,8 +192,8 @@ export default class ProfileManager {
 
     let zcap = {
       '@context': SECURITY_CONTEXT_V2_URL,
-      // TODO: use 128-bit random multibase encoded value instead of uuid
-      id: 'urn:zcap:' + uuid(),
+      // use 128-bit random multibase encoded value
+      id: `urn:zcap:${await DataHubClient.generateId()}`,
       invoker
     };
     if(referenceId) {
@@ -236,8 +234,8 @@ export default class ProfileManager {
       if(target) {
         // TODO: handle case where an existing target is requested
       } else {
-        // TODO: use 128-bit random multibase encoded value instead of uuid
-        const docId = uuid();
+        // use 128-bit random multibase encoded value
+        const docId = await DataHubClient.generateId();
         zcap.invocationTarget.id = `${dataHub.id}/documents/${docId}`;
         // insert empty doc to establish self as a recipient
         const doc = {
