@@ -428,6 +428,11 @@ async function _getControllerKeyFromSecret({secret, accountId, kmsClient}) {
   // two-factor auth, etc.)
   const service = new AccountService();
   const {account: {controllerKeySalt}} = await service.get({id: accountId});
+  if(!controllerKeySalt) {
+    throw new Error(
+      'Could not generate controller key for account; ' +
+      '"controllerKeySalt" not found.');
+  }
 
   // convert salt and secret Uint8Array; do `salt || secret` (salt first as
   // it is definitely fixed length)
