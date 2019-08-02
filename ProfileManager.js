@@ -4,6 +4,8 @@
 'use strict';
 
 import axios from 'axios';
+import * as base64url from 'base64url-universal';
+import {AccountService} from 'bedrock-web-account';
 import {CapabilityDelegation} from 'ocapld';
 import {ControllerKey, KmsClient} from 'web-kms-client';
 import {DataHubClient} from 'secure-data-hub-client';
@@ -283,7 +285,8 @@ export default class ProfileManager {
   }
 
   async _sessionChanged({authentication, newData}) {
-    const newAccountId = (newData.account || {}).id || null;
+    const {account = {}} = newData;
+    const {id: newAccountId = null} = account;
 
     // clear cache
     if(this.accountId && this.accountId !== newAccountId) {
@@ -292,7 +295,7 @@ export default class ProfileManager {
     }
 
     // update state
-    this.accountId = newAccountId;
+    const accountId = this.accountId = newAccountId;
     this.controllerKey = null;
 
     if(!(authentication || newData.account)) {
@@ -304,8 +307,8 @@ export default class ProfileManager {
     const {secret} = (authentication || {});
     const kmsClient = new KmsClient();
     this.controllerKey = await (secret ?
-      ControllerKey.fromSecret({secret, handle: this.accountId, kmsClient}) :
-      ControllerKey.fromCache({handle: this.accountId, kmsClient}));
+      _getControllerKeyFromSecret({secret, accountId, kmsClient}) :
+      ControllerKey.fromCache({handle: accountId, kmsClient}));
     if(this.controllerKey === null) {
       // could not load from cache and no `secret`, so cannot load data hub
       return;
@@ -414,6 +417,26 @@ async function _delegate({zcap, signer}) {
     }),
     compactProof: false
   });
+}
+
+// helper that mixes a user generated secret and a server-side seed
+async function _getControllerKeyFromSecret({secret, accountId, kmsClient}) {
+  // get `controllerKeySalt` from account; it will be mixed with the user
+  // secret so that the controller key can't be created without *both* a user
+  // supplied secret and a server side secret salt that can't be accessed
+  // unless the user has authenticated with the server (which may include
+  // two-factor auth, etc.)
+  const service = new AccountService();
+  const {account: {controllerKeySalt}} = await service.get({id: accountId});
+
+  // convert salt and secret Uint8Array; do `salt || secret` (salt first as
+  // it is definitely fixed length)
+  const first = base64url.decode(controllerKeySalt);
+  const second = new TextEncoder().encode(secret);
+  secret = new Uint8Array(first.length + second.length);
+  secret.set(first);
+  secret.set(second, first.length);
+  return ControllerKey.fromSecret({secret, handle: accountId, kmsClient});
 }
 
 // FIXME: make more restrictive, support `did:key` and `did:v1`
