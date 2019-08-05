@@ -17,8 +17,7 @@
     "did-veres-one": "^7.0.0",
     "jsonld-signatures": "^4.1.1",
     "ocapld": "^1.3.0",
-    "secure-data-hub-client": "digitalbazaar/secure-data-hub-client#key-agreement",
-    "uuid-random": "^1.0.7",
+    "secure-data-hub-client": "^1.0.0",
     "web-kms-client": "digitalbazaar/web-kms-client#http-sig"
   },
   "repository": {
