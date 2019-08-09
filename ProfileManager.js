@@ -5,6 +5,7 @@
 
 import axios from 'axios';
 import * as base64url from 'base64url-universal';
+import bcrypt from 'bcryptjs';
 import {AccountService} from 'bedrock-web-account';
 import {CapabilityDelegation} from 'ocapld';
 import {ControllerKey, KmsClient} from 'web-kms-client';
@@ -434,13 +435,8 @@ async function _getControllerKeyFromSecret({secret, accountId, kmsClient}) {
       '"controllerKeySalt" not found.');
   }
 
-  // convert salt and secret Uint8Array; do `salt || secret` (salt first as
-  // it is definitely fixed length)
-  const first = base64url.decode(controllerKeySalt);
-  const second = new TextEncoder().encode(secret);
-  secret = new Uint8Array(first.length + second.length);
-  secret.set(first);
-  secret.set(second, first.length);
+  // hash secret with controller key salt
+  secret = await bcrypt.hash(secret, controllerKeySalt);
   return ControllerKey.fromSecret({secret, handle: accountId, kmsClient});
 }
 

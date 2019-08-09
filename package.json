@@ -9,6 +9,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "base64url-universal": "^1.0.1",
+    "bcryptjs": "^2.4.3",
     "bedrock-web-account": "^1.0.0",
     "bedrock-web-did-store": "digitalbazaar/bedrock-web-did-store#initial",
     "bedrock-web-session": "^1.2.0",
