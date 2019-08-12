@@ -4,9 +4,9 @@
 'use strict';
 
 import axios from 'axios';
-import * as base64url from 'base64url-universal';
 import bcrypt from 'bcryptjs';
 import {AccountService} from 'bedrock-web-account';
+import jsonpatch from 'fast-json-patch';
 import {CapabilityDelegation} from 'ocapld';
 import {ControllerKey, KmsClient} from 'web-kms-client';
 import {DataHubClient} from 'secure-data-hub-client';
@@ -31,10 +31,12 @@ export default class ProfileManager {
    * @param {string} options.kmsModule - The KMS module to use to generate keys.
    * @param {string} options.kmsBaseUrl - The base URL for the KMS service,
    *   used to generate keys.
+   * @param {string} options.recoveryHost - The recovery host application to
+   *   use for keystore configs.
    *
    * @returns {ProfileManager} - The new instance.
    */
-  constructor({kmsModule, kmsBaseUrl}) {
+  constructor({kmsModule, kmsBaseUrl, recoveryHost}) {
     if(typeof kmsModule !== 'string') {
       throw new TypeError('"kmsModule" must be a string.');
     }
@@ -47,6 +49,10 @@ export default class ProfileManager {
     this.dataHubCache = new DataHubClientCache();
     this.kmsModule = kmsModule;
     this.kmsBaseUrl = kmsBaseUrl;
+    if(recoveryHost) {
+      this.recoveryHost = recoveryHost.startsWith('https://') ?
+        recoveryHost : `https://${recoveryHost}`;
+    }
   }
 
   /**
@@ -316,7 +322,7 @@ export default class ProfileManager {
     }
 
     // ensure primary keystore exists for controller key
-    await this._ensureKeystore();
+    await this._ensureKeystore({accountId});
 
     // ensure the account's primary data hub exists and cache it
     const dataHub = await this._ensureDataHub();
@@ -367,17 +373,18 @@ export default class ProfileManager {
   }
 
   async _createKeystore({referenceId} = {}) {
-    const {controllerKey} = this;
+    const {controllerKey, recoveryHost} = this;
 
     // create keystore
     const config = {
       sequence: 0,
       controller: controllerKey.id,
-      // TODO: add `invoker` and `delegator` using arrays including
-      // controllerKey.id *and* identifier for backup key recovery entity
       invoker: controllerKey.id,
       delegator: controllerKey.id
     };
+    if(recoveryHost) {
+      config.invoker = [config.invoker, recoveryHost];
+    }
     if(referenceId) {
       config.referenceId = referenceId;
     }
@@ -387,8 +394,27 @@ export default class ProfileManager {
     });
   }
 
-  async _ensureKeystore() {
+  async _ensureKeystore({accountId}) {
     const {controllerKey} = this;
+
+    // see if there is an existing keystore for the account
+    const service = new AccountService();
+    const {account: {keystore}} = await service.get({id: accountId});
+    if(keystore) {
+      // keystore exists, get config and check against controller key
+      let config = await KmsClient.getKeystore({id: keystore});
+      const {controller} = config;
+      if(controller !== controllerKey.id) {
+        // keystore does NOT match; perform recovery
+        config = await this._recoverKeystore({id: keystore});
+        // TODO: handle future case where user has not authorized the
+        // host application to perform recovery
+      }
+      controllerKey.kmsClient.keystore = config.id;
+      return config;
+    }
+
+    // if there is no existing keystore...
     let config = await KmsClient.findKeystore({
       url: `${this.kmsBaseUrl}/keystores`,
       controller: controllerKey.id,
@@ -401,7 +427,72 @@ export default class ProfileManager {
       return null;
     }
     controllerKey.kmsClient.keystore = config.id;
+
+    await this._addKeystoreToAccount({accountId, keystoreId: config.id});
+
     return config;
+  }
+
+  async _addKeystoreToAccount({accountId, keystoreId}) {
+    const service = new AccountService();
+    while(true) {
+      const {account, meta} = await service.get({id: accountId});
+      if(account.keystore === keystoreId) {
+        break;
+      }
+
+      const {sequence} = meta;
+      const observer = jsonpatch.observe(account);
+      const patch = jsonpatch.generate(observer);
+      account.keystore = keystoreId;
+      jsonpatch.unobserve(account, observer);
+      try {
+        await service.update({id: accountId, sequence, patch});
+        break;
+      } catch(e) {
+        // if e has a conflict response try again, otherwise throw error
+        const {response = {}} = e;
+        if(response.status !== 409) {
+          throw e;
+        }
+      }
+    }
+  }
+
+  async _recoverKeystore({id}) {
+    const {controllerKey} = this;
+    const url = `${id}/recover`;
+    const response = await axios.post(url, {
+      '@context': 'https://w3id.org/security/v2',
+      controller: controllerKey.id
+    }, {headers: DEFAULT_HEADERS});
+    const keystoreConfig = response.data;
+
+    // clear data hub cache so new instances will use new controller key
+    this.dataHubCache.clear();
+
+    // update account data hub
+    const dataHub = await this._ensureDataHub();
+    await this.dataHubCache.set('primary', dataHub);
+    const config = await DataHubClient.getConfig({id: dataHub.id});
+    config.sequence++;
+    config.invoker = config.delegator = controllerKey.id;
+    await DataHubClient.updateConfig({id: dataHub.id, config});
+
+    // TODO: updating profile data hubs should not be required once profile
+    // data hubs properly use the profile's keys for invoker/delegator
+    // instead of the account's controller key
+
+    // update all profile data hubs
+    const profiles = await this.getProfiles();
+    await Promise.all(profiles.map(async ({content: profile}) => {
+      const config = await DataHubClient.getConfig({id: profile.dataHub});
+      config.sequence++;
+      config.invoker = config.delegator = controllerKey.id;
+      await DataHubClient.updateConfig({id: profile.dataHub, config});
+    }));
+
+    return keystoreConfig;
   }
 }
 
