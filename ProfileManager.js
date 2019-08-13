@@ -460,6 +460,9 @@ export default class ProfileManager {
   }
 
   async _recoverKeystore({id}) {
+    // FIXME: this needs to be posted to a different endpoint that is
+    // able to authenticate the user and ensure that the controller being
+    // updated was under the control of the user's account
     const {controllerKey} = this;
     const url = `${id}/recover`;
     const response = await axios.post(url, {
