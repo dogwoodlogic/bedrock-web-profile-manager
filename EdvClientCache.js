@@ -3,7 +3,7 @@
  */
 'use strict';
 
-export default class DataHubClientCache {
+export default class EdvClientCache {
   constructor() {
     this.cache = new Map();
   }

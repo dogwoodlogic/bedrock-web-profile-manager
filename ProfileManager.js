@@ -8,10 +8,10 @@ import bcrypt from 'bcryptjs';
 import {AccountService} from 'bedrock-web-account';
 import jsonpatch from 'fast-json-patch';
 import {CapabilityDelegation} from 'ocapld';
-import {ControllerKey, KmsClient} from 'web-kms-client';
-import {DataHubClient} from 'secure-data-hub-client';
+import {ControllerKey, KmsClient} from 'webkms-client';
+import {EdvClient} from 'edv-client';
 import jsigs from 'jsonld-signatures';
-import DataHubClientCache from './DataHubClientCache.js';
+import EdvClientCache from './EdvClientCache.js';
 import {generateDidDoc, storeDidDocument} from './did.js';
 import {LDKeyPair} from 'crypto-ld';
 
@@ -24,7 +24,7 @@ export default class ProfileManager {
   /**
    * Creates a new instance of a ProfileManager and attaches it to the given
    * session instance. This ProfileManager will track changes to the given
-   * session, creating and/or caching account and profile data hubs as needed.
+   * session, creating and/or caching account and profile edvs as needed.
    *
    * @param {Object} options - The options to use.
    * @param {Object} options.session - A `bedrock-web-session` session instance.
@@ -46,7 +46,7 @@ export default class ProfileManager {
     this.session = null;
     this.accountId = null;
     this.controllerKey = null;
-    this.dataHubCache = new DataHubClientCache();
+    this.edvClientCache = new EdvClientCache();
     this.kmsModule = kmsModule;
     this.kmsBaseUrl = kmsBaseUrl;
     if(recoveryHost) {
@@ -58,7 +58,7 @@ export default class ProfileManager {
   /**
    * Attaches this instance to the given session. This ProfileManager will
    * track changes to the given session, creating and/or caching account and
-   * profile data hubs as needed.
+   * profile edvs as needed.
    *
    * @param {Object} options - The options to use.
    * @param {Object} options.session - A `bedrock-web-session` session instance.
@@ -76,20 +76,20 @@ export default class ProfileManager {
     await this._sessionChanged({newData: session.data});
   }
 
-  async getAccountDataHub() {
-    return this.dataHubCache.get('primary');
+  async getAccountEdv() {
+    return this.edvClientCache.get('primary');
   }
 
-  async getProfileDataHub({profileId}) {
+  async getProfileEdv({profileId}) {
     const id = `profile.${profileId}`;
-    let dataHub = await this.dataHubCache.get(id);
-    if(dataHub) {
-      return dataHub;
+    let edvClient = await this.edvClientCache.get(id);
+    if(edvClient) {
+      return edvClient;
     }
 
-    const accountDataHub = await this.getAccountDataHub();
+    const accountEdv = await this.getAccountEdv();
     const {controllerKey: invocationSigner} = this;
-    const [doc] = await accountDataHub.find({
+    const [doc] = await accountEdv.find({
       equals: {'content.id': profileId},
       invocationSigner
     });
@@ -98,18 +98,18 @@ export default class ProfileManager {
       return null;
     }
 
-    // get the profile data hub
+    // get the profile edv
     const {content: profile} = doc;
-    const config = await DataHubClient.getConfig({id: profile.dataHub});
+    const config = await EdvClient.getConfig({id: profile.edv});
     const [keyAgreementKey, hmac] = await Promise.all([
       this.controllerKey.getKeyAgreementKey(
         {id: config.keyAgreementKey.id, type: config.keyAgreementKey.type}),
       this.controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
-    dataHub = new DataHubClient(
+    edvClient = new EdvClient(
       {id: config.id, keyResolver, keyAgreementKey, hmac});
-    await this.dataHubCache.set(id, dataHub);
-    return dataHub;
+    await this.edvClientCache.set(id, edvClient);
+    return edvClient;
   }
 
   async createProfile({type, content}) {
@@ -120,17 +120,17 @@ export default class ProfileManager {
     const didDoc = await generateDidDoc({invokeKey, keyType});
     const {id: did} = didDoc;
 
-    // TODO: support making the profile data hub controlled by the profile
+    // TODO: support making the profile edv controlled by the profile
     // instead
 
-    // get primary data hub and create an account controlled data hub for
+    // get primary edv and create an account controlled edv for
     // the new profile
-    const [accountDataHub, profileDataHub] = await Promise.all([
-      this.getAccountDataHub(),
-      this._createDataHub()
+    const [accountEdv, profileEdv] = await Promise.all([
+      this.getAccountEdv(),
+      this._createEdv()
     ]);
 
-    // insert a profile document into the primary data hub
+    // insert a profile document into the primary edv
     let profileType = 'Profile';
     if(type) {
       profileType = [profileType, type];
@@ -141,18 +141,18 @@ export default class ProfileManager {
         id: did,
         type: profileType,
         // TODO: might need this to be the specific document -- or a zcap
-        dataHub: profileDataHub.id
+        edv: profileEdv.id
       }
     };
     const {controllerKey: invocationSigner} = this;
-    await accountDataHub.insert({doc, invocationSigner});
+    await accountEdv.insert({doc, invocationSigner});
 
-    // cache the profile data hub and store the unregistered DID document in it
-    await this.dataHubCache.set(`profile.${did}`, profileDataHub);
+    // cache the profile edv and store the unregistered DID document in it
+    await this.edvClientCache.set(`profile.${did}`, profileEdv);
 
     // FIXME: DID store will not store private keys, use KMS instead
-    // FIXME: Is this the right invocationSigner (from the profile data hub)?
-    await storeDidDocument({dataHub: profileDataHub, didDoc, invocationSigner});
+    // FIXME: Is this the right invocationSigner (from the profile edv)?
+    await storeDidDocument({edv: profileEdv, didDoc, invocationSigner});
     // FIXME: need to register the did doc with ledger?
 
     return doc;
@@ -161,12 +161,12 @@ export default class ProfileManager {
   // TODO: implement adding an existing profile to an account
 
   async getProfile({profileId}) {
-    const dataHub = await this.getAccountDataHub();
-    if(!dataHub) {
+    const edvClient = await this.getAccountEdv();
+    if(!edvClient) {
       return null;
     }
     const {controllerKey: invocationSigner} = this;
-    const [doc = null] = await dataHub.find({
+    const [doc = null] = await edvClient.find({
       equals: {'content.id': profileId},
       invocationSigner
     });
@@ -174,12 +174,12 @@ export default class ProfileManager {
   }
 
   async getProfiles({type} = {}) {
-    const dataHub = await this.getAccountDataHub();
-    if(!dataHub) {
+    const edvClient = await this.getAccountEdv();
+    if(!edvClient) {
       return [];
     }
     const {controllerKey: invocationSigner} = this;
-    const profileDocs = await dataHub.find({
+    const profileDocs = await edvClient.find({
       equals: {'content.type': 'Profile'},
       invocationSigner
     });
@@ -199,7 +199,7 @@ export default class ProfileManager {
         '"invocationTarget" must be an object that includes a "type".');
     }
 
-    const dataHub = await this.getProfileDataHub({profileId});
+    const edvClient = await this.getProfileEdv({profileId});
 
     // TODO: to reduce correlation between the account and multiple profiles,
     // consider generating a unique controller key per profile DID, but
@@ -210,7 +210,7 @@ export default class ProfileManager {
     let zcap = {
       '@context': SECURITY_CONTEXT_V2_URL,
       // use 128-bit random multibase encoded value
-      id: `urn:zcap:${await DataHubClient.generateId()}`,
+      id: `urn:zcap:${await EdvClient.generateId()}`,
       invoker
     };
     if(referenceId) {
@@ -230,7 +230,7 @@ export default class ProfileManager {
           '"invocationTarget.id" must be set for Web KMS capabilities.');
       }
       // TODO: fetch `target` from a key mapping document in the profile's
-      // data hub to get public key ID to set as `referenceId`
+      // edv to get public key ID to set as `referenceId`
       zcap.invocationTarget = {
         id: target,
         type: targetType,
@@ -242,7 +242,7 @@ export default class ProfileManager {
 
       await controllerKey.kmsClient.enableCapability(
         {capabilityToEnable: zcap, invocationSigner: signer});
-    } else if(targetType === 'urn:datahub:document') {
+    } else if(targetType === 'urn:edv:document') {
       zcap.invocationTarget = {
         id: target,
         type: targetType
@@ -252,8 +252,8 @@ export default class ProfileManager {
         // TODO: handle case where an existing target is requested
       } else {
         // use 128-bit random multibase encoded value
-        const docId = await DataHubClient.generateId();
-        zcap.invocationTarget.id = `${dataHub.id}/documents/${docId}`;
+        const docId = await EdvClient.generateId();
+        zcap.invocationTarget.id = `${edvClient.id}/documents/${docId}`;
         // insert empty doc to establish self as a recipient
         const doc = {
           id: docId,
@@ -265,25 +265,25 @@ export default class ProfileManager {
         // the controller of the `invoker`
         const recipients = [{
           header: {
-            kid: dataHub.keyAgreementKey.id,
+            kid: edvClient.keyAgreementKey.id,
             alg: 'ECDH-ES+A256KW'
           }
         }];
         if(invocationTarget.recipient) {
           recipients.push(invocationTarget.recipient);
         }
-        await dataHub.insert({doc, recipients, invocationSigner});
+        await edvClient.insert({doc, recipients, invocationSigner});
       }
       if(!parentCapability) {
         const idx = zcap.invocationTarget.id.lastIndexOf('/');
         const docId = zcap.invocationTarget.id.substr(idx + 1);
-        parentCapability = `${dataHub.id}/zcaps/documents/${docId}`;
+        parentCapability = `${edvClient.id}/zcaps/documents/${docId}`;
       }
       zcap.parentCapability = parentCapability;
       zcap = await _delegate({zcap, signer});
 
-      // enable zcap via dataHub client
-      await dataHub.enableCapability(
+      // enable zcap via edv client
+      await edvClient.enableCapability(
         {capabilityToEnable: zcap, invocationSigner: signer});
     } else {
       throw new Error(`Unsupported invocation target type "${targetType}".`);
@@ -298,7 +298,7 @@ export default class ProfileManager {
     // clear cache
     if(this.accountId && this.accountId !== newAccountId) {
       await ControllerKey.clearCache({handle: this.accountId});
-      await this.dataHubCache.clear();
+      await this.edvClientCache.clear();
     }
 
     // update state
@@ -317,32 +317,32 @@ export default class ProfileManager {
       _getControllerKeyFromSecret({secret, accountId, kmsClient}) :
       ControllerKey.fromCache({handle: accountId, kmsClient}));
     if(this.controllerKey === null) {
-      // could not load from cache and no `secret`, so cannot load data hub
+      // could not load from cache and no `secret`, so cannot load edv
       return;
     }
 
     // ensure primary keystore exists for controller key
     await this._ensureKeystore({accountId});
 
-    // ensure the account's primary data hub exists and cache it
-    const dataHub = await this._ensureDataHub();
-    await this.dataHubCache.set('primary', dataHub);
+    // ensure the account's primary edv exists and cache it
+    const edvClient = await this._ensureEdv();
+    await this.edvClientCache.set('primary', edvClient);
   }
 
-  async _createDataHub({referenceId} = {}) {
-    // create KAK and HMAC keys for data hub config
+  async _createEdv({referenceId} = {}) {
+    // create KAK and HMAC keys for edv config
     const {controllerKey, kmsModule} = this;
     const [keyAgreementKey, hmac] = await Promise.all([
       controllerKey.generateKey({type: 'keyAgreement', kmsModule}),
       controllerKey.generateKey({type: 'hmac', kmsModule})
     ]);
 
-    // create data hub
+    // create edv
     let config = {
       sequence: 0,
       controller: controllerKey.handle,
       // TODO: add `invoker` and `delegator` using controllerKey.id *or*, if
-      // this is a profile's data hub, the profile ID
+      // this is a profile's edv, the profile ID
       invoker: controllerKey.id,
       delegator: controllerKey.id,
       keyAgreementKey: {id: keyAgreementKey.id, type: keyAgreementKey.type},
@@ -351,24 +351,24 @@ export default class ProfileManager {
     if(referenceId) {
       config.referenceId = referenceId;
     }
-    config = await DataHubClient.createDataHub({config});
-    return new DataHubClient(
+    config = await EdvClient.createEdv({config});
+    return new EdvClient(
       {id: config.id, keyResolver, keyAgreementKey, hmac});
   }
 
-  async _ensureDataHub() {
+  async _ensureEdv() {
     const {controllerKey} = this;
-    const config = await DataHubClient.findConfig(
+    const config = await EdvClient.findConfig(
       {controller: controllerKey.handle, referenceId: 'primary'});
     if(config === null) {
-      return await this._createDataHub({referenceId: 'primary'});
+      return await this._createEdv({referenceId: 'primary'});
     }
     const [keyAgreementKey, hmac] = await Promise.all([
       controllerKey.getKeyAgreementKey(
         {id: config.keyAgreementKey.id, type: config.keyAgreementKey.type}),
       controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
-    return new DataHubClient(
+    return new EdvClient(
       {id: config.id, keyResolver, keyAgreementKey, hmac});
   }
 
@@ -471,28 +471,28 @@ export default class ProfileManager {
     }, {headers: DEFAULT_HEADERS});
     const keystoreConfig = response.data;
 
-    // clear data hub cache so new instances will use new controller key
-    this.dataHubCache.clear();
+    // clear edv client cache so new instances will use new controller key
+    this.edvClientCache.clear();
 
-    // update account data hub
-    const dataHub = await this._ensureDataHub();
-    await this.dataHubCache.set('primary', dataHub);
-    const config = await DataHubClient.getConfig({id: dataHub.id});
+    // update account edv
+    const edvClient = await this._ensureEdv();
+    await this.edvClientCache.set('primary', edvClient);
+    const config = await EdvClient.getConfig({id: edvClient.id});
     config.sequence++;
     config.invoker = config.delegator = controllerKey.id;
-    await DataHubClient.updateConfig({id: dataHub.id, config});
+    await EdvClient.updateConfig({id: edvClient.id, config});
 
-    // TODO: updating profile data hubs should not be required once profile
-    // data hubs properly use the profile's keys for invoker/delegator
+    // TODO: updating profile edvs should not be required once profile
+    // edvs properly use the profile's keys for invoker/delegator
     // instead of the account's controller key
 
-    // update all profile data hubs
+    // update all profile edvs
     const profiles = await this.getProfiles();
     await Promise.all(profiles.map(async ({content: profile}) => {
-      const config = await DataHubClient.getConfig({id: profile.dataHub});
+      const config = await EdvClient.getConfig({id: profile.edv});
       config.sequence++;
       config.invoker = config.delegator = controllerKey.id;
-      await DataHubClient.updateConfig({id: profile.dataHub, config});
+      await EdvClient.updateConfig({id: profile.edv, config});
     }));
 
     return keystoreConfig;
