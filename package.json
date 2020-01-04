@@ -11,7 +11,6 @@
     "base64url-universal": "^1.1.0",
     "bcryptjs": "^2.4.3",
     "bedrock-web-account": "^1.0.0",
-    "bedrock-web-did-store": "digitalbazaar/bedrock-web-did-store#initial",
     "bedrock-web-session": "^1.2.0",
     "bedrock-web-store": "^1.2.0",
     "crypto-ld": "^3.7.0",

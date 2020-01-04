@@ -12,7 +12,7 @@ import {ControllerKey, KmsClient} from 'webkms-client';
 import {EdvClient} from 'edv-client';
 import jsigs from 'jsonld-signatures';
 import EdvClientCache from './EdvClientCache.js';
-import {generateDidDoc, storeDidDocument} from './did.js';
+import {generateDidDoc} from './did.js';
 import {LDKeyPair} from 'crypto-ld';
 
 const {SECURITY_CONTEXT_V2_URL, sign, suites} = jsigs;
@@ -115,7 +115,8 @@ export default class ProfileManager {
   async createProfile({type, content}) {
     const keyType = 'Ed25519VerificationKey2018';
     // generate an invocation key and a DID Document for the profile
-    // FIXME: add support for key generation via web-kms-client
+    // FIXME: add support for key generation via webkms-client, invoke key
+    // is currently discarded
     const invokeKey = await LDKeyPair.generate({type: keyType});
     const didDoc = await generateDidDoc({invokeKey, keyType});
     const {id: did} = didDoc;
@@ -147,13 +148,8 @@ export default class ProfileManager {
     const {controllerKey: invocationSigner} = this;
     await accountEdv.insert({doc, invocationSigner});
 
-    // cache the profile edv and store the unregistered DID document in it
+    // cache the profile edv
     await this.edvClientCache.set(`profile.${did}`, profileEdv);
-
-    // FIXME: DID store will not store private keys, use KMS instead
-    // FIXME: Is this the right invocationSigner (from the profile edv)?
-    await storeDidDocument({edv: profileEdv, didDoc, invocationSigner});
-    // FIXME: need to register the did doc with ledger?
 
     return doc;
   }
