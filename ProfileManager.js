@@ -281,6 +281,50 @@ export default class ProfileManager {
       // enable zcap via edv client
       await edvClient.enableCapability(
         {capabilityToEnable: zcap, invocationSigner: signer});
+    } else if(targetType === 'urn:edv:documents') {
+      zcap.invocationTarget = {
+        id: target,
+        type: targetType
+      };
+
+      if(target) {
+        // TODO: handle case where an existing target is requested
+      } else {
+        // TODO: note that only the recipient of the zcap will be able
+        // to read the documents it writes -- as no recipient is specified
+        // here ... could add this to the zcap as a special caveat that
+        // requires the recipient always be present for every document written
+        zcap.invocationTarget.id = `${edvClient.id}/documents`;
+      }
+      if(!parentCapability) {
+        parentCapability = `${edvClient.id}/zcaps/documents`;
+      }
+      zcap.parentCapability = parentCapability;
+      zcap = await _delegate({zcap, signer});
+
+      // enable zcap via edv client
+      await edvClient.enableCapability(
+        {capabilityToEnable: zcap, invocationSigner: signer});
+    } else if(targetType === 'urn:edv:authorizations') {
+      zcap.invocationTarget = {
+        id: target,
+        type: targetType
+      };
+
+      if(target) {
+        // TODO: handle case where an existing target is requested
+      } else {
+        zcap.invocationTarget.id = `${edvClient.id}/authorizations`;
+      }
+      if(!parentCapability) {
+        parentCapability = `${edvClient.id}/zcaps/authorizations`;
+      }
+      zcap.parentCapability = parentCapability;
+      zcap = await _delegate({zcap, signer});
+
+      // enable zcap via edv client
+      await edvClient.enableCapability(
+        {capabilityToEnable: zcap, invocationSigner: signer});
     } else {
       throw new Error(`Unsupported invocation target type "${targetType}".`);
     }
