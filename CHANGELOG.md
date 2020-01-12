@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 0.3.0 - 2020-01-xx
+## 0.3.0 - 2020-01-12
 
 ### Added
 - Add support for delegatable and webkms-authorizations zcaps.
