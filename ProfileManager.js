@@ -187,7 +187,7 @@ export default class ProfileManager {
 
   async delegateCapability({profileId, request}) {
     const {
-      invocationTarget, invoker, referenceId, allowedAction, caveat
+      invocationTarget, invoker, delegator, referenceId, allowedAction, caveat
     } = request;
     if(!(invocationTarget && typeof invocationTarget === 'object' &&
       invocationTarget.type)) {
@@ -209,6 +209,9 @@ export default class ProfileManager {
       id: `urn:zcap:${await EdvClient.generateId()}`,
       invoker
     };
+    if(delegator) {
+      zcap.delegator = delegator;
+    }
     if(referenceId) {
       zcap.referenceId = referenceId;
     }
@@ -324,6 +327,27 @@ export default class ProfileManager {
 
       // enable zcap via edv client
       await edvClient.enableCapability(
+        {capabilityToEnable: zcap, invocationSigner: signer});
+    } else if(targetType === 'urn:webkms:authorizations') {
+      zcap.invocationTarget = {
+        id: target,
+        type: targetType
+      };
+      const keystore = controllerKey.kmsClient.keystore;
+
+      if(target) {
+        // TODO: handle case where an existing target is requested
+      } else {
+        zcap.invocationTarget.id = `${keystore}/authorizations`;
+      }
+      if(!parentCapability) {
+        parentCapability = `${keystore}/zcaps/authorizations`;
+      }
+      zcap.parentCapability = parentCapability;
+      zcap = await _delegate({zcap, signer});
+
+      // enable zcap via kms client
+      await controllerKey.kmsClient.enableCapability(
         {capabilityToEnable: zcap, invocationSigner: signer});
     } else {
       throw new Error(`Unsupported invocation target type "${targetType}".`);
