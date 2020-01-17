@@ -222,20 +222,25 @@ export default class ProfileManager {
       zcap.caveat = caveat;
     }
     let {parentCapability} = request;
-    const {id: target, type: targetType} = invocationTarget;
+    const {id: target, type: targetType, verificationMethod} = invocationTarget;
     if(targetType === 'Ed25519VerificationKey2018') {
       if(!target) {
         throw new TypeError(
           '"invocationTarget.id" must be set for Web KMS capabilities.');
+      }
+      if(!verificationMethod) {
+        throw new TypeError(
+          '"invocationTarget.verificationMethod" is required when ' +
+          '"invocationTarget.type" is "Ed25519VerificationKey2018".');
       }
       // TODO: fetch `target` from a key mapping document in the profile's
       // edv to get public key ID to set as `referenceId`
       zcap.invocationTarget = {
         id: target,
         type: targetType,
-        // TODO: put public key ID here
-        //referenceId:
+        verificationMethod,
       };
+
       zcap.parentCapability = parentCapability || target;
       zcap = await _delegate({zcap, signer});
 
