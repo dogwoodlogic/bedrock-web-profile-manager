@@ -1,5 +1,12 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 0.4.0 - 2020-01-17
+
+### Added
+- **BREAKING**: `invocationTarget.verificationMethod` is required when
+  `invocationTarget.type` is `Ed25519VerificationKey2018` in
+  `delegateCapability` API.
+
 ## 0.3.0 - 2020-01-12
 
 ### Added
