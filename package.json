@@ -19,7 +19,7 @@
     "fast-json-patch": "^2.2.1",
     "jsonld-signatures": "^5.0.0",
     "ocapld": "^1.4.0",
-    "webkms-client": "^1.0.0"
+    "webkms-client": "digitalbazaar/webkms-client#refactor"
   },
   "repository": {
     "type": "git",

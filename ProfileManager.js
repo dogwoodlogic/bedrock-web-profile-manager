@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
 import {AccountService} from 'bedrock-web-account';
 import jsonpatch from 'fast-json-patch';
 import {CapabilityDelegation} from 'ocapld';
-import {ControllerKey, KmsClient} from 'webkms-client';
+import {CapabilityAgent, KeystoreAgent, KmsClient} from 'webkms-client';
 import {EdvClient} from 'edv-client';
 import jsigs from 'jsonld-signatures';
 import EdvClientCache from './EdvClientCache.js';
@@ -45,8 +45,9 @@ export default class ProfileManager {
     }
     this.session = null;
     this.accountId = null;
-    this.controllerKey = null;
+    this.capabilityAgent = null;
     this.edvClientCache = new EdvClientCache();
+    this.keystoreAgent = null;
     this.kmsModule = kmsModule;
     this.kmsBaseUrl = kmsBaseUrl;
     if(recoveryHost) {
@@ -88,7 +89,8 @@ export default class ProfileManager {
     }
 
     const accountEdv = await this.getAccountEdv();
-    const {controllerKey: invocationSigner} = this;
+    const {capabilityAgent} = this;
+    const invocationSigner = capabilityAgent.getSigner();
     const [doc] = await accountEdv.find({
       equals: {'content.id': profileId},
       invocationSigner
@@ -98,13 +100,16 @@ export default class ProfileManager {
       return null;
     }
 
+    // FIXME: use separate keystore agent for profile, currently same keystore
+    // is shared across profiles as a *temporary* measure
+
     // get the profile edv
     const {content: profile} = doc;
     const config = await EdvClient.getConfig({id: profile.edv});
     const [keyAgreementKey, hmac] = await Promise.all([
-      this.controllerKey.getKeyAgreementKey(
+      this.keystoreAgent.getKeyAgreementKey(
         {id: config.keyAgreementKey.id, type: config.keyAgreementKey.type}),
-      this.controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
+      this.keystoreAgent.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
     edvClient = new EdvClient(
       {id: config.id, keyResolver, keyAgreementKey, hmac});
@@ -145,7 +150,7 @@ export default class ProfileManager {
         edv: profileEdv.id
       }
     };
-    const {controllerKey: invocationSigner} = this;
+    const invocationSigner = this.capabilityAgent.getSigner();
     await accountEdv.insert({doc, invocationSigner});
 
     // cache the profile edv
@@ -161,7 +166,7 @@ export default class ProfileManager {
     if(!edvClient) {
       return null;
     }
-    const {controllerKey: invocationSigner} = this;
+    const invocationSigner = this.capabilityAgent.getSigner();
     const [doc = null] = await edvClient.find({
       equals: {'content.id': profileId},
       invocationSigner
@@ -174,7 +179,7 @@ export default class ProfileManager {
     if(!edvClient) {
       return [];
     }
-    const {controllerKey: invocationSigner} = this;
+    const invocationSigner = this.capabilityAgent.getSigner();
     const profileDocs = await edvClient.find({
       equals: {'content.type': 'Profile'},
       invocationSigner
@@ -198,10 +203,8 @@ export default class ProfileManager {
     const edvClient = await this.getProfileEdv({profileId});
 
     // TODO: to reduce correlation between the account and multiple profiles,
-    // consider generating a unique controller key per profile DID, but
-    // consider the additional overhead for password replacement
-    const {controllerKey} = this;
-    const signer = controllerKey;
+    // generate a unique capability agent per profile DID
+    const signer = this.capabilityAgent.getSigner();
 
     let zcap = {
       '@context': SECURITY_CONTEXT_V2_URL,
@@ -240,11 +243,10 @@ export default class ProfileManager {
         type: targetType,
         verificationMethod,
       };
-
       zcap.parentCapability = parentCapability || target;
       zcap = await _delegate({zcap, signer});
 
-      await controllerKey.kmsClient.enableCapability(
+      await this.keystoreAgent.kmsClient.enableCapability(
         {capabilityToEnable: zcap, invocationSigner: signer});
     } else if(targetType === 'urn:edv:document') {
       zcap.invocationTarget = {
@@ -263,7 +265,6 @@ export default class ProfileManager {
           id: docId,
           content: {}
         };
-        const {controllerKey: invocationSigner} = this;
         // TODO: this is not clean; zcap query needs work! ... another
         // option is to get a `keyAgreement` verification method from
         // the controller of the `invoker`
@@ -276,6 +277,7 @@ export default class ProfileManager {
         if(invocationTarget.recipient) {
           recipients.push(invocationTarget.recipient);
         }
+        const invocationSigner = this.capabilityAgent.getSigner();
         await edvClient.insert({doc, recipients, invocationSigner});
       }
       if(!parentCapability) {
@@ -338,7 +340,7 @@ export default class ProfileManager {
         id: target,
         type: targetType
       };
-      const keystore = controllerKey.kmsClient.keystore;
+      const keystore = this.keystoreAgent.keystore.id;
 
       if(target) {
         // TODO: handle case where an existing target is requested
@@ -352,7 +354,7 @@ export default class ProfileManager {
       zcap = await _delegate({zcap, signer});
 
       // enable zcap via kms client
-      await controllerKey.kmsClient.enableCapability(
+      await this.keystoreAgent.kmsClient.enableCapability(
         {capabilityToEnable: zcap, invocationSigner: signer});
     } else {
       throw new Error(`Unsupported invocation target type "${targetType}".`);
@@ -366,31 +368,31 @@ export default class ProfileManager {
 
     // clear cache
     if(this.accountId && this.accountId !== newAccountId) {
-      await ControllerKey.clearCache({handle: this.accountId});
+      await CapabilityAgent.clearCache({handle: this.accountId});
       await this.edvClientCache.clear();
     }
 
     // update state
     const accountId = this.accountId = newAccountId;
-    this.controllerKey = null;
+    this.capabilityAgent = null;
+    this.keystoreAgent = null;
 
     if(!(authentication || newData.account)) {
       // no account in session, return
       return;
     }
 
-    // cache account controller key
+    // cache account capability agent
     const {secret} = (authentication || {});
-    const kmsClient = new KmsClient();
-    this.controllerKey = await (secret ?
-      _getControllerKeyFromSecret({secret, accountId, kmsClient}) :
-      ControllerKey.fromCache({handle: accountId, kmsClient}));
-    if(this.controllerKey === null) {
+    this.capabilityAgent = await (secret ?
+      _getCapabilityAgentFromSecret({secret, accountId}) :
+      CapabilityAgent.fromCache({handle: accountId}));
+    if(this.capabilityAgent === null) {
       // could not load from cache and no `secret`, so cannot load edv
       return;
     }
 
-    // ensure primary keystore exists for controller key
+    // ensure primary keystore exists for capability agent
     await this._ensureKeystore({accountId});
 
     // ensure the account's primary edv exists and cache it
@@ -400,20 +402,20 @@ export default class ProfileManager {
 
   async _createEdv({referenceId} = {}) {
     // create KAK and HMAC keys for edv config
-    const {controllerKey, kmsModule} = this;
+    const {capabilityAgent, keystoreAgent, kmsModule} = this;
     const [keyAgreementKey, hmac] = await Promise.all([
-      controllerKey.generateKey({type: 'keyAgreement', kmsModule}),
-      controllerKey.generateKey({type: 'hmac', kmsModule})
+      keystoreAgent.generateKey({type: 'keyAgreement', kmsModule}),
+      keystoreAgent.generateKey({type: 'hmac', kmsModule})
     ]);
 
     // create edv
     let config = {
       sequence: 0,
-      controller: controllerKey.handle,
-      // TODO: add `invoker` and `delegator` using controllerKey.id *or*, if
+      controller: capabilityAgent.handle,
+      // TODO: add `invoker` and `delegator` using capabilityAgent.id *or*, if
       // this is a profile's edv, the profile ID
-      invoker: controllerKey.id,
-      delegator: controllerKey.id,
+      invoker: capabilityAgent.id,
+      delegator: capabilityAgent.id,
       keyAgreementKey: {id: keyAgreementKey.id, type: keyAgreementKey.type},
       hmac: {id: hmac.id, type: hmac.type}
     };
@@ -426,30 +428,30 @@ export default class ProfileManager {
   }
 
   async _ensureEdv() {
-    const {controllerKey} = this;
+    const {capabilityAgent, keystoreAgent} = this;
     const config = await EdvClient.findConfig(
-      {controller: controllerKey.handle, referenceId: 'primary'});
+      {controller: capabilityAgent.handle, referenceId: 'primary'});
     if(config === null) {
       return await this._createEdv({referenceId: 'primary'});
     }
     const [keyAgreementKey, hmac] = await Promise.all([
-      controllerKey.getKeyAgreementKey(
+      keystoreAgent.getKeyAgreementKey(
         {id: config.keyAgreementKey.id, type: config.keyAgreementKey.type}),
-      controllerKey.getHmac({id: config.hmac.id, type: config.hmac.type})
+      keystoreAgent.getHmac({id: config.hmac.id, type: config.hmac.type})
     ]);
     return new EdvClient(
       {id: config.id, keyResolver, keyAgreementKey, hmac});
   }
 
   async _createKeystore({referenceId} = {}) {
-    const {controllerKey, recoveryHost} = this;
+    const {capabilityAgent, recoveryHost} = this;
 
     // create keystore
     const config = {
       sequence: 0,
-      controller: controllerKey.id,
-      invoker: controllerKey.id,
-      delegator: controllerKey.id
+      controller: capabilityAgent.id,
+      invoker: capabilityAgent.id,
+      delegator: capabilityAgent.id
     };
     if(recoveryHost) {
       config.invoker = [config.invoker, recoveryHost];
@@ -464,29 +466,30 @@ export default class ProfileManager {
   }
 
   async _ensureKeystore({accountId}) {
-    const {controllerKey} = this;
+    const {capabilityAgent} = this;
 
     // see if there is an existing keystore for the account
     const service = new AccountService();
     const {account: {keystore}} = await service.get({id: accountId});
     if(keystore) {
-      // keystore exists, get config and check against controller key
+      // keystore exists, get config and check against capability agent
       let config = await KmsClient.getKeystore({id: keystore});
       const {controller} = config;
-      if(controller !== controllerKey.id) {
+      if(controller !== capabilityAgent.id) {
         // keystore does NOT match; perform recovery
         config = await this._recoverKeystore({id: keystore});
         // TODO: handle future case where user has not authorized the
         // host application to perform recovery
       }
-      controllerKey.kmsClient.keystore = config.id;
+      this.keystoreAgent = new KeystoreAgent(
+        {keystore: config, capabilityAgent});
       return config;
     }
 
     // if there is no existing keystore...
     let config = await KmsClient.findKeystore({
       url: `${this.kmsBaseUrl}/keystores`,
-      controller: controllerKey.id,
+      controller: capabilityAgent.id,
       referenceId: 'primary'
     });
     if(config === null) {
@@ -495,7 +498,7 @@ export default class ProfileManager {
     if(config === null) {
       return null;
     }
-    controllerKey.kmsClient.keystore = config.id;
+    this.keystoreAgent = new KeystoreAgent({keystore: config, capabilityAgent});
 
     await this._addKeystoreToAccount({accountId, keystoreId: config.id});
 
@@ -532,15 +535,15 @@ export default class ProfileManager {
     // FIXME: this needs to be posted to a different endpoint that is
     // able to authenticate the user and ensure that the controller being
     // updated was under the control of the user's account
-    const {controllerKey} = this;
+    const {capabilityAgent} = this;
     const url = `${id}/recover`;
     const response = await axios.post(url, {
       '@context': 'https://w3id.org/security/v2',
-      controller: controllerKey.id
+      controller: capabilityAgent.id
     }, {headers: DEFAULT_HEADERS});
     const keystoreConfig = response.data;
 
-    // clear edv client cache so new instances will use new controller key
+    // clear edv client cache so new instances will use new capability agent
     this.edvClientCache.clear();
 
     // update account edv
@@ -548,19 +551,19 @@ export default class ProfileManager {
     await this.edvClientCache.set('primary', edvClient);
     const config = await EdvClient.getConfig({id: edvClient.id});
     config.sequence++;
-    config.invoker = config.delegator = controllerKey.id;
+    config.invoker = config.delegator = capabilityAgent.id;
     await EdvClient.updateConfig({id: edvClient.id, config});
 
     // TODO: updating profile edvs should not be required once profile
     // edvs properly use the profile's keys for invoker/delegator
-    // instead of the account's controller key
+    // instead of the account's capability agent
 
     // update all profile edvs
     const profiles = await this.getProfiles();
     await Promise.all(profiles.map(async ({content: profile}) => {
       const config = await EdvClient.getConfig({id: profile.edv});
       config.sequence++;
-      config.invoker = config.delegator = controllerKey.id;
+      config.invoker = config.delegator = capabilityAgent.id;
       await EdvClient.updateConfig({id: profile.edv, config});
     }));
 
@@ -584,23 +587,23 @@ async function _delegate({zcap, signer}) {
 }
 
 // helper that mixes a user generated secret and a server-side seed
-async function _getControllerKeyFromSecret({secret, accountId, kmsClient}) {
-  // get `controllerKeySalt` from account; it will be mixed with the user
-  // secret so that the controller key can't be created without *both* a user
+async function _getCapabilityAgentFromSecret({secret, accountId}) {
+  // get `capabilityAgentSalt` from account; it will be mixed with the user
+  // secret so that the capability agent can't be created without *both* a user
   // supplied secret and a server side secret salt that can't be accessed
   // unless the user has authenticated with the server (which may include
   // two-factor auth, etc.)
   const service = new AccountService();
-  const {account: {controllerKeySalt}} = await service.get({id: accountId});
-  if(!controllerKeySalt) {
+  const {account: {capabilityAgentSalt}} = await service.get({id: accountId});
+  if(!capabilityAgentSalt) {
     throw new Error(
-      'Could not generate controller key for account; ' +
-      '"controllerKeySalt" not found.');
+      'Could not generate capability agent for account; ' +
+      '"capabilityAgentSalt" not found.');
   }
 
-  // hash secret with controller key salt
-  secret = await bcrypt.hash(secret, controllerKeySalt);
-  return ControllerKey.fromSecret({secret, handle: accountId, kmsClient});
+  // hash secret with salt
+  secret = await bcrypt.hash(secret, capabilityAgentSalt);
+  return CapabilityAgent.fromSecret({secret, handle: accountId});
 }
 
 // FIXME: make more restrictive, support `did:key` and `did:v1`
