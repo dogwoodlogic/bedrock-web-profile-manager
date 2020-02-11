@@ -7,19 +7,19 @@
     "generate-readme": "jsdoc2md -t template.hbs *.js > README.md"
   },
   "dependencies": {
-    "axios": "^0.18.0",
+    "axios": "^0.19.0",
     "base64url-universal": "^1.1.0",
     "bcryptjs": "^2.4.3",
     "bedrock-web-account": "^1.0.0",
     "bedrock-web-session": "^1.2.0",
     "bedrock-web-store": "^1.2.0",
     "crypto-ld": "^3.7.0",
-    "did-veres-one": "^10.0.1",
+    "did-veres-one": "^10.1.0",
     "edv-client": "^2.0.0",
     "fast-json-patch": "^2.2.1",
     "jsonld-signatures": "^5.0.0",
-    "ocapld": "^1.4.0",
-    "webkms-client": "digitalbazaar/webkms-client#refactor"
+    "ocapld": "^1.8.0",
+    "webkms-client": "^2.0.1"
   },
   "repository": {
     "type": "git",
