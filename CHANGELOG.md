@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 0.6.0 - 2020-02-14 15:30:52
+
+### Changed
+- Use webkms-client@2.
+
 ## 0.5.0 - 2020-02-14
 
 ### Changed
