@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 0.5.0 - 2020-02-xx
+## 0.5.0 - 2020-02-14
 
 ### Changed
 - Use jsonld-signatures@5.
