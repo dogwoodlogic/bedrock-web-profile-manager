@@ -4,7 +4,6 @@
 'use strict';
 
 import axios from 'axios';
-import bcrypt from 'bcryptjs';
 import {AccountService} from 'bedrock-web-account';
 import jsonpatch from 'fast-json-patch';
 import {CapabilityDelegation} from 'ocapld';
@@ -382,14 +381,16 @@ export default class ProfileManager {
       return;
     }
 
-    // cache account capability agent
-    const {secret} = (authentication || {});
-    this.capabilityAgent = await (secret ?
-      _getCapabilityAgentFromSecret({secret, accountId}) :
-      CapabilityAgent.fromCache({handle: accountId}));
+    this.capabilityAgent = await CapabilityAgent.fromCache({handle: accountId});
     if(this.capabilityAgent === null) {
-      // could not load from cache and no `secret`, so cannot load edv
-      return;
+      // generate a secret and load a new capability agent
+      const crypto = (self.crypto || self.msCrypto);
+      const secret = new Uint8Array(32);
+      crypto.getRandomValues(secret);
+
+      // TODO: support N capability agents, one per profile/profile-agent
+      this.capabilityAgent = await CapabilityAgent.fromSecret(
+        {secret, handle: accountId});
     }
 
     // ensure primary keystore exists for capability agent
@@ -584,26 +585,6 @@ async function _delegate({zcap, signer}) {
     }),
     compactProof: false
   });
-}
-
-// helper that mixes a user generated secret and a server-side seed
-async function _getCapabilityAgentFromSecret({secret, accountId}) {
-  // get `capabilityAgentSalt` from account; it will be mixed with the user
-  // secret so that the capability agent can't be created without *both* a user
-  // supplied secret and a server side secret salt that can't be accessed
-  // unless the user has authenticated with the server (which may include
-  // two-factor auth, etc.)
-  const service = new AccountService();
-  const {account: {capabilityAgentSalt}} = await service.get({id: accountId});
-  if(!capabilityAgentSalt) {
-    throw new Error(
-      'Could not generate capability agent for account; ' +
-      '"capabilityAgentSalt" not found.');
-  }
-
-  // hash secret with salt
-  secret = await bcrypt.hash(secret, capabilityAgentSalt);
-  return CapabilityAgent.fromSecret({secret, handle: accountId});
 }
 
 // FIXME: make more restrictive, support `did:key` and `did:v1`
