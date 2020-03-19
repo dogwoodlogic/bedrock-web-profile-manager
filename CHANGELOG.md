@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 2.0.0 - 2020-03-19
+
+### Changed
+- **BREAKING**: Many breaking API changes. See code/docs for details.
+
 ## 1.0.0 - 2020-03-06
 
 ### Changed
