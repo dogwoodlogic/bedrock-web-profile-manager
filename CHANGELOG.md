@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 4.0.1 - 2020-04-03
+
+### Changed
+- Fix internal issues with capability delegation.
+
 ## 4.0.0 - 2020-04-02
 
 ### Changed
