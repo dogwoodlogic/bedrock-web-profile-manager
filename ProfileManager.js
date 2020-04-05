@@ -2,7 +2,6 @@
  * Copyright (c) 2019-2020 Digital Bazaar, Inc. All rights reserved.
  */
 import AccessManager from './AccessManager.js';
-import {CapabilityDelegation} from 'ocapld';
 import {ProfileService} from 'bedrock-web-profile';
 import {
   AsymmetricKey,
@@ -15,12 +14,9 @@ import {
 import Collection from './Collection.js';
 import {EdvClient, EdvDocument} from 'edv-client';
 import EdvClientCache from './EdvClientCache.js';
-import jsigs from 'jsonld-signatures';
 import keyResolver from './keyResolver.js';
 import utils from './utils.js';
 
-const {SECURITY_CONTEXT_V2_URL, sign, suites} = jsigs;
-const {Ed25519Signature2018} = suites;
 const JWE_ALG = 'ECDH-ES+A256KW';
 
 export default class ProfileManager {
@@ -634,7 +630,7 @@ export default class ProfileManager {
     const {invocationSigner: signer} = await this.getProfileSigner({profileId});
     const keystoreAgent = await this.getProfileKeystoreAgent({profileId});
     const {id: keystoreId} = keystoreAgent.keystore;
-    return utils.delegateCapability({signer, keystoreId, request})
+    return utils.delegateCapability({signer, keystoreId, request});
   }
 
   async getCollection({profileId, referenceIdPrefix, type} = {}) {
@@ -834,7 +830,7 @@ export default class ProfileManager {
       delegateUserDocEdvRequest.invocationTarget = {
         id: `${documentsUrl}/${docId}`,
         type: 'urn:edv:document'
-      }
+      };
     }
     const profileUserDocZcap = await utils.delegateCapability({
       signer: invocationSigner,
@@ -863,7 +859,7 @@ export default class ProfileManager {
       delegateEdvDocumentRequest.invocationTarget = {
         id: `${documentsUrl}/${docId}`,
         type: 'urn:edv:document'
-      }
+      };
     }
     const delegateEdvKakRequest = {
       referenceId: `user-edv-kak`,
