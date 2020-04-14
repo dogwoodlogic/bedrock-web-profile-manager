@@ -1,5 +1,11 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 4.1.0 - 2020-04-14
+
+### Added
+- Parameter validation on some APIs.
+- Improve test coverage.
+
 ## 4.0.1 - 2020-04-03
 
 ### Changed
