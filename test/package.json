@@ -1,10 +1,10 @@
 {
   "name": "bedrock-web-profile-manager-test",
   "version": "0.0.1-0",
-  "description": "Bedrock Web Profile Manager test",
   "private": true,
   "scripts": {
-    "test": "node --preserve-symlinks test.js test"
+    "test": "node --preserve-symlinks test.js test --framework karma",
+    "coverage-ci": "node --preserve-symlinks test.js test --framework karma"
   },
   "dependencies": {
     "bedrock": "^3.1.0",
@@ -15,7 +15,7 @@
     "bedrock-https-agent": "^1.0.1",
     "bedrock-identity": "^7.0.1",
     "bedrock-jsonld-document-loader": "^1.0.1",
-    "bedrock-karma": "^2.0.0",
+    "bedrock-karma": "^2.1.0",
     "bedrock-kms": "^2.0.0",
     "bedrock-kms-http": "^2.0.0",
     "bedrock-mongodb": "^6.0.2",
