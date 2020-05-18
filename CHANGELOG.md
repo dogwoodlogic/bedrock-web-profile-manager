@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 4.2.0 - 2020-05-18
+
+### Added
+- Add support for `did:v1` based profiles.
+
 ## 4.1.0 - 2020-04-14
 
 ### Added
