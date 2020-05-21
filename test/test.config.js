@@ -10,7 +10,7 @@ config.karma.suites['bedrock-web-kms'] = path.join('web', '**', '*.js');
 
 config.karma.config.proxies = {
   '/': {
-    target: 'https://bedrock.localhost:18443',
+    target: 'https://localhost:18443',
     changeOrigin: true
   }
 };

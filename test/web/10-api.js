@@ -14,7 +14,7 @@ describe('Profile Manager API', () => {
       const profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
 
@@ -53,7 +53,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -88,7 +88,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -123,7 +123,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -168,7 +168,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -203,7 +203,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -239,7 +239,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -274,7 +274,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -315,7 +315,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -366,7 +366,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
@@ -409,7 +409,7 @@ describe('Profile Manager API', () => {
       profileManager = new ProfileManager({
         kmsModule: KMS_MODULE,
         kmsBaseUrl: KMS_BASE_URL,
-        edvBaseUrl: `https://bedrock.localhost:18443/edvs`,
+        edvBaseUrl: `https://localhost:18443/edvs`,
         recoveryHost: window.location.host
       });
     });
