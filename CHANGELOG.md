@@ -1,5 +1,14 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 4.3.0
+
+### Added
+- Add LRU cache to improve performance of some operations.
+
+### Changed
+- Use webkms-client@2.3.0 which features a cache for improving performance
+  for HMAC operations.
+
 ## 4.2.0 - 2020-05-18
 
 ### Added
