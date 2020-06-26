@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 5.0.1 - 2020-06-26
+
+### Fixed
+- Adjust and correct cache implementation.
+
 ## 5.0.0 - 2020-06-24
 
 ### Changed
