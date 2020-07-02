@@ -1,5 +1,12 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 5.1.0 - 2020-07-02
+
+### Changed
+- Update deps.
+- Update test deps.
+- Update CI workflow.
+
 ## 5.0.2 - 2020-06-26
 
 ### Fixed
