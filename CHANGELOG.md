@@ -1,5 +1,11 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 5.2.0 - 2020-07-07
+
+## Changed
+- Reduce extra map lookups.
+- Update peer deps and test deps.
+
 ## 5.1.0 - 2020-07-02
 
 ### Changed
