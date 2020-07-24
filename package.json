@@ -1,6 +1,6 @@
 {
   "name": "bedrock-web-profile-manager",
-  "version": "5.3.0",
+  "version": "5.3.1-0",
   "description": "Profile management for Bedrock Web Apps",
   "main": "index.js",
   "scripts": {
