@@ -1,8 +1,14 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 5.3.0 - 2020-07-24
+
+### Changed
+- Validate the `parentCapabilities` param to the `delegateEdvCapabilities` API.
+- Improve test coverage.
+
 ## 5.2.0 - 2020-07-07
 
-## Changed
+### Changed
 - Reduce extra map lookups.
 - Update peer deps and test deps.
 
