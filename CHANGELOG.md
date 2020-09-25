@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 5.3.1 - 2020-09-25
+
+### Fixed
+- Correctly handle `expires`.
+
 ## 5.3.0 - 2020-07-24
 
 ### Changed
