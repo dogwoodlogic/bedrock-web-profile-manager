@@ -1,5 +1,11 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 6.0.0 - 2020-09-25
+
+### Changed
+- **BREAKING**: Make `keyResolver` more restrictive. Only support KMS systems
+  with a same origin policy and `did:key` and `did:v1`.
+
 ## 5.3.1 - 2020-09-25
 
 ### Fixed
