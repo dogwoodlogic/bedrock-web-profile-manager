@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 6.1.0 - 2020-10-06
+
+### Changed
+- Use edv-client@6.
+
 ## 6.0.0 - 2020-09-25
 
 ### Changed
