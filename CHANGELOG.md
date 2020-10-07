@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 6.1.1 -
+## 6.2.0 - 2020-10-07
 
 ### Added
 - A configurable profileService parameter to ProfileManager.
