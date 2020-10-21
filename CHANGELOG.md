@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 6.2.1 - 2020-10-21
+
+### Fixed
+- Remove use of assert-plus.
+
 ## 6.2.0 - 2020-10-07
 
 ### Added
