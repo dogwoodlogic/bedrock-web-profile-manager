@@ -18,9 +18,10 @@
     "did-io": "^0.8.3",
     "did-method-key": "^0.7.0",
     "did-veres-one": "^12.1.1",
-    "edv-client": "^7.0.1",
     "jsonld-signatures": "^7.0.0",
     "lru-cache": "^6.0.0",
+    "edv-client": "github:dogwoodlogic/edv-client#sld-lfu-rebased",
+    "fast-json-patch": "^3.0.0-1",
     "ocapld": "^2.0.0",
     "webkms-client": "^3.1.0"
   },
