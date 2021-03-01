@@ -28,7 +28,7 @@
     "lru-cache": "^5.1.1",
     "ocapld": "^2.0.0",
     "uuid-random": "^1.3.2",
-    "webkms-client": "^2.3.0"
+    "webkms-client": "github:dogwoodlogic/webkms-client#sld"
   },
   "devDependencies": {
     "eslint": "^7.9.0",
