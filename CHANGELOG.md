@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 7.0.0 - TBD
+## 7.0.0 - 2021-03-09
 
 ### Changed
 - **BREAKING**: Remove same origin requirement in key resolver.
