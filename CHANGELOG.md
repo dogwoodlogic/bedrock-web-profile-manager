@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 8.0.0 - 2021-03-TBD
+## 8.0.0 - 2021-05-21
 
 ### Changed
 - **BREAKING**: Temporarily remove veres-one DID support.
