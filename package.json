@@ -20,7 +20,7 @@
     "did-veres-one": "^12.1.1",
     "jsonld-signatures": "^7.0.0",
     "lru-cache": "^6.0.0",
-    "edv-client": "github:dogwoodlogic/edv-client#sld-lfu-rebased",
+    "edv-client": "github:dogwoodlogic/edv-client#slf-lfu-rebased",
     "fast-json-patch": "^3.0.0-1",
     "ocapld": "^2.0.0",
     "uuid-random": "^1.3.2",
