@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 8.0.1 - 2021-06-02
+
+### Changed
+- Update did-veres-one dep to latest beta.
+
 ## 8.0.0 - 2021-05-21
 
 ### Changed
