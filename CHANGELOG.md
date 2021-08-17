@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 8.0.2 - 2021-08-17
+
+### Fixed
+- Fix error message that is thrown when `publicAlias` is missing.
+
 ## 8.0.1 - 2021-06-02
 
 ### Changed
