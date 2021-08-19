@@ -810,8 +810,6 @@ describe('Profile Manager API', () => {
       should.not.exist(result);
       should.exist(error);
       error.name.should.equal('TypeError');
-      error.message.should.contain(
-        'Cannot read property \'type\' of undefined');
     });
     it('should fail if no edvId', async () => {
       const {
