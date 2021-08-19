@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 8.0.3 - 2021-08-xx
+## 8.0.3 - 2021-08-19
 
 ### Fixed
 - Update dependencies to pull in fixed ed25519* modules.
