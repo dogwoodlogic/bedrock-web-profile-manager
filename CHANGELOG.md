@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 9.0.0 - 2021-xx-xx
+## 9.0.0 - 2021-08-24
 
 ### Changed
 - **BREAKING**: Use webkms-client@7. Most changes are internal, but this
