@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 10.0.0 - 2021-xx-xx
+## 10.0.0 - 2021-09-03
 
 ### Changed
 - **BREAKING**: No changes to the public API. Must use bedrock-kms-http@9,
