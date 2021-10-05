@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 10.0.1 - 2021-TBD
+## 10.0.1 - 2021-10-05
 
 ### Fixed
 - Fix destructuring of `keystoreId` in `delegateCapability()`. Previously
