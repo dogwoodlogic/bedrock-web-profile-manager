@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 12.0.0 - 2022-02-xx
+## 12.0.0 - 2022-02-23
 
 ### Changed
 - **BREAKING**: Use `@digitalbazaar/edv-client@12`. This new
