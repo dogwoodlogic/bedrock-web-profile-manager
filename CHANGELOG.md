@@ -1,5 +1,12 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 12.0.0 - 2022-02-xx
+
+### Changed
+- **BREAKING**: Use `@digitalbazaar/edv-client@12`. This new
+  version computes encrypted indexes for EDVs differently (more privacy
+  preserving) and is therefore incompatible with previous versions.
+
 ## 11.1.1 - 2022-02-23
 
 ### Added
