@@ -183,6 +183,7 @@ describe('Profile Manager API', () => {
       result.should.have.property('id');
       result.id.should.contain('did:key:');
       result.should.have.property('zcaps');
+      result.should.have.property('profileMeters');
     });
     it('should fail if profileId is undefined', async () => {
       let error;
