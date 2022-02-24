@@ -1,5 +1,14 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 11.1.1 - 2022-02-xx
+
+### Added
+- Expose new method `getProfileMeters` to get the meters for a profile.
+
+### Fixed
+- Exposing `profileMeters` in `profileAgent` was a mistake. This quick bug
+  fix remedies that and instead exposes `getProfileMeters`.
+
 ## 11.1.0 - 2022-02-23
 
 ### Added

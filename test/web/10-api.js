@@ -183,7 +183,6 @@ describe('Profile Manager API', () => {
       result.should.have.property('id');
       result.id.should.contain('did:key:');
       result.should.have.property('zcaps');
-      result.should.have.property('profileMeters');
     });
     it('should fail if profileId is undefined', async () => {
       let error;
@@ -473,6 +472,68 @@ describe('Profile Manager API', () => {
       let result;
       try {
         result = await profileManager.getProfileKeystoreAgent({profileId: ''});
+      } catch(e) {
+        error = e;
+      }
+      should.not.exist(result);
+      should.exist(error);
+      error.name.should.equal('TypeError');
+      error.message.should.contain('profileId');
+    });
+  });
+  describe('getProfileMeters api', () => {
+    let profileManager;
+    beforeEach(async () => {
+      profileManager = new ProfileManager({
+        edvBaseUrl: EDV_BASE_URL
+      });
+
+      await profileManager.setSession({
+        session: {
+          data: {
+            account: {
+              id: ACCOUNT_ID
+            }
+          },
+          on: () => {},
+        }
+      });
+    });
+    it('should succeed if profile exists', async () => {
+      let error;
+      let result;
+      try {
+        const content = {didMethod: 'v1', didOptions: {mode: 'test'}};
+        const {id: profileId} = await profileManager.createProfile(content);
+        result = await profileManager.getProfileMeters({profileId});
+      } catch(e) {
+        error = e;
+      }
+      should.not.exist(error);
+      should.exist(result);
+      result.should.be.an('array');
+      result.some(m => m.referenceId = 'profile:core:edv').should.equal(true);
+      result.some(m => m.referenceId = 'profile:core:credentials')
+        .should.equal(true);
+    });
+    it('should fail if profileId is undefined', async () => {
+      let error;
+      let result;
+      try {
+        result = await profileManager.getProfileMeters({profileId: undefined});
+      } catch(e) {
+        error = e;
+      }
+      should.not.exist(result);
+      should.exist(error);
+      error.name.should.equal('TypeError');
+      error.message.should.contain('profileId');
+    });
+    it('should fail if profileId is an empty string', async () => {
+      let error;
+      let result;
+      try {
+        result = await profileManager.getProfileMeters({profileId: ''});
       } catch(e) {
         error = e;
       }

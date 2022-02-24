@@ -109,15 +109,14 @@ export default class ProfileManager {
     // determine if `profileAgent` has a `userDocument` yet by looking for
     // a zcap to access it
     const profileAgentRecord = await this._getAgentRecord({profileId});
-    const {profileAgent, profileMeters} = profileAgentRecord;
+    const {profileAgent} = profileAgentRecord;
     const {userDocument: capability} = profileAgent.zcaps;
     if(!capability) {
       // generate content from profile agent record as access management has
       // not been initialized for the profile yet
       const content = {
         id: profileAgent.id,
-        zcaps: {},
-        profileMeters
+        zcaps: {}
       };
       for(const [key, zcap] of Object.entries(profileAgent.zcaps)) {
         content.zcaps[key] = zcap;
@@ -328,6 +327,23 @@ export default class ProfileManager {
       profileCapabilityInvocationKey, profileDocZcap
     });
     return {profile, profileAgent};
+  }
+
+  /**
+   * Gets the meters for a profile.
+   *
+   * @param {object} options - The options to use.
+   * @param {string} options.profileId - The ID of the profile to get the
+   *   meters for.
+   *
+   * @returns {Promise<array>} The profile meters.
+   */
+  async getProfileMeters({profileId} = {}) {
+    assert.nonEmptyString(profileId, 'profileId');
+
+    const profileAgentRecord = await this._getAgentRecord({profileId});
+    const {profileMeters} = profileAgentRecord;
+    return profileMeters.map(record => record.meter);
   }
 
   /**
@@ -812,7 +828,7 @@ export default class ProfileManager {
   async _getAgentContent({profileAgentRecord}) {
     // get agent content from cache
     const cache = this._getCache('agent-content');
-    const {profileAgent, profileMeters} = profileAgentRecord;
+    const {profileAgent} = profileAgentRecord;
     const {id, sequence} = profileAgent;
     const cacheKey = `${id}-${sequence}`;
     const agentContent = cache.get(cacheKey);
@@ -857,8 +873,7 @@ export default class ProfileManager {
     });
 
     // merge profile agent EDV doc content w/ backend profile agent record
-    const promise = this._mergeAgentContent(
-      {edvDocument, profileAgent, profileMeters});
+    const promise = this._mergeAgentContent({edvDocument, profileAgent});
     cache.set(cacheKey, promise);
 
     try {
@@ -869,7 +884,7 @@ export default class ProfileManager {
     }
   }
 
-  async _mergeAgentContent({edvDocument, profileAgent, profileMeters}) {
+  async _mergeAgentContent({edvDocument, profileAgent}) {
     const {zcaps} = profileAgent;
     const {content} = await edvDocument.read();
     // update zcaps to include zcaps from agent record
