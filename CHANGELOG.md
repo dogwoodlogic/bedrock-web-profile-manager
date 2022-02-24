@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 11.1.0 - 2022-02-xx
+## 11.1.0 - 2022-02-23
 
 ### Added
 - Include `profileMeters` in `profileAgent` returned from `getAgent`.
