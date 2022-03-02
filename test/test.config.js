@@ -3,6 +3,8 @@
  */
 'use strict';
 
+require('bedrock-did-io');
+
 const {config} = require('bedrock');
 const path = require('path');
 
@@ -53,3 +55,6 @@ config.profile.kms.ipAllowList = ['127.0.0.1/32'];
 // use session
 config.express.useSession = true;
 config.express.jsonErrorLevel = 'full';
+
+// do not fetch v1 dids from testnet
+config['did-io'].methodOverrides.v1.disableFetch = true;
