@@ -1,5 +1,11 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 13.0.0 - 2022-03-xx
+
+### Changed
+- **BREAKING**: Use `@digitalbazaar/webkms-client@10` and
+  `@digitalbazaar/edv-client@13`.
+
 ## 12.0.0 - 2022-02-23
 
 ### Changed
