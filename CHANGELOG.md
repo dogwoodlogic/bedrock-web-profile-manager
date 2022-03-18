@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 13.1.0 - 2022-03-xx
+
+### Added
+- Add key resolver cache.
+
 ## 13.0.0 - 2022-03-01
 
 ### Changed
