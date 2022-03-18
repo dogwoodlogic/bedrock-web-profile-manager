@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 14.0.1 - 2022-03-xx
+## 14.0.1 - 2022-03-18
 
 ### Fixed
 - Ensure root profile agent stores user EDV key agreement key
