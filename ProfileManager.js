@@ -800,7 +800,7 @@ export default class ProfileManager {
           profileAgent
         }),
         this.getDelegatedAgentCapability({
-          referenceId: 'user-edv-kak',
+          referenceId: ZCAP_REFERENCE_IDS.userKak,
           profileAgent
         })
       ]));
@@ -1038,7 +1038,9 @@ export default class ProfileManager {
       profileAgentId,
       zcaps: {
         ...profileAgentRecord.profileAgent.zcaps,
-        userDocument
+        userDocument,
+        [ZCAP_REFERENCE_IDS.userKak]:
+          userEdvZcaps[ZCAP_REFERENCE_IDS.userKak]
       }
     });
 

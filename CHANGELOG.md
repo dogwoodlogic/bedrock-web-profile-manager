@@ -1,5 +1,11 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 14.0.1 - 2022-03-xx
+
+### Fixed
+- Ensure root profile agent stores user EDV key agreement key
+  zcap in backend record.
+
 ## 14.0.0 - 2022-03-18
 
 ### Changed
