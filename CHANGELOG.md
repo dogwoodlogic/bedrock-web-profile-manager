@@ -4,6 +4,7 @@
 
 ### Changed
 - **BREAKING**: Update root profile agent zcap TTLs to be 1y.
+- **BREAKING**: Consolidate zcap for user EDV key agreement key.
 
 ## 13.1.0 - 2022-03-17
 
