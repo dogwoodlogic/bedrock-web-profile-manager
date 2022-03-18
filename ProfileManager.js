@@ -2,6 +2,8 @@
  * Copyright (c) 2019-2022 Digital Bazaar, Inc. All rights reserved.
  */
 import AccessManager from './AccessManager.js';
+import assert from './assert.js';
+import crypto from './crypto.js';
 import {ProfileService} from 'bedrock-web-profile';
 import {
   AsymmetricKey,
@@ -15,8 +17,6 @@ import {EdvClient, EdvDocument} from '@digitalbazaar/edv-client';
 import LRU from 'lru-cache';
 import keyResolver from './keyResolver.js';
 import utils from './utils.js';
-import assert from './assert.js';
-import crypto from './crypto.js';
 
 const JWE_ALG = 'ECDH-ES+A256KW';
 const ZCAP_REFERENCE_IDS = {
@@ -25,8 +25,12 @@ const ZCAP_REFERENCE_IDS = {
   userKak: 'user-edv-kak',
   userHmac: 'user-edv-hmac',
 };
+// 15 minutes
 const DEFAULT_ZCAP_GRACE_PERIOD = 15 * 60 * 1000;
+// 24 hours
 const DEFAULT_ZCAP_TTL = 24 * 60 * 60 * 1000;
+// 365 days
+const DEFAULT_PROFILE_AGENT_ZCAP_TTL = 365 * 24 * 60 * 60 * 1000;
 
 export default class ProfileManager {
   /**
@@ -589,9 +593,7 @@ export default class ProfileManager {
       parentCapabilities, edvId, hmac, keyAgreementKey
     });
 
-    // 90 day expiration for EDV zcaps
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 90);
+    const expires = new Date(Date.now() + DEFAULT_PROFILE_AGENT_ZCAP_TTL);
 
     const delegateEdvDocumentsRequest = {
       referenceId: `${referenceIdPrefix}-edv-documents`,
@@ -948,11 +950,9 @@ export default class ProfileManager {
     edvId, profileAgentId, docId, invocationTarget, edvParentCapability,
     invocationSigner
   }) {
-    // 90 day expiration for EDV zcaps
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 90);
+    const expires = new Date(Date.now() + DEFAULT_PROFILE_AGENT_ZCAP_TTL);
 
-    const delegateUserDocEdvRequest = {
+    const delegateUserDocEdvZcapRequest = {
       referenceId: ZCAP_REFERENCE_IDS.profileDoc,
       allowedAction: ['read'],
       controller: profileAgentId,
@@ -961,15 +961,16 @@ export default class ProfileManager {
       type: 'urn:edv:document'
     };
     if(invocationTarget) {
-      delegateUserDocEdvRequest.invocationTarget = invocationTarget;
+      delegateUserDocEdvZcapRequest.invocationTarget = invocationTarget;
     } else {
       const documentsUrl = edvId ?
         `${edvId}/documents` : edvParentCapability.invocationTarget;
-      delegateUserDocEdvRequest.invocationTarget = `${documentsUrl}/${docId}`;
+      delegateUserDocEdvZcapRequest.invocationTarget =
+        `${documentsUrl}/${docId}`;
     }
     const profileUserDocZcap = await utils.delegateCapability({
       signer: invocationSigner,
-      request: delegateUserDocEdvRequest
+      request: delegateUserDocEdvZcapRequest
     });
 
     return profileUserDocZcap;
@@ -979,11 +980,9 @@ export default class ProfileManager {
     edvId, profileAgentId, docId, invocationTarget, edvParentCapability,
     keyAgreementKey, invocationSigner
   }) {
-    // 90 day expiration for EDV zcaps
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 90);
+    const expires = new Date(Date.now() + DEFAULT_PROFILE_AGENT_ZCAP_TTL);
 
-    const delegateEdvDocumentRequest = {
+    const delegateEdvDocumentZcapRequest = {
       referenceId: `profile-agent-edv-document`,
       // the profile agent is only allowed to read its own doc
       allowedAction: ['read'],
@@ -993,17 +992,18 @@ export default class ProfileManager {
       expires,
     };
     if(invocationTarget) {
-      delegateEdvDocumentRequest.invocationTarget = invocationTarget;
+      delegateEdvDocumentZcapRequest.invocationTarget = invocationTarget;
     } else {
       const documentsUrl = edvId ?
         `${edvId}/documents` : edvParentCapability.invocationTarget;
-      delegateEdvDocumentRequest.invocationTarget = `${documentsUrl}/${docId}`;
+      delegateEdvDocumentZcapRequest.invocationTarget =
+        `${documentsUrl}/${docId}`;
     }
     const keyId = keyAgreementKey.kmsId ? keyAgreementKey.kmsId :
       keyAgreementKey.id;
     const keystoreId = utils.parseKeystoreId(keyId);
     const parentZcap = `urn:zcap:root:${encodeURIComponent(keystoreId)}`;
-    const delegateEdvKakRequest = {
+    const delegateEdvKakZcapRequest = {
       referenceId: ZCAP_REFERENCE_IDS.userKak,
       allowedAction: ['deriveSecret'],
       controller: profileAgentId,
@@ -1016,11 +1016,11 @@ export default class ProfileManager {
     const [userDocumentZcap, userKakZcap] = await Promise.all([
       utils.delegateCapability({
         signer: invocationSigner,
-        request: delegateEdvDocumentRequest
+        request: delegateEdvDocumentZcapRequest
       }),
       utils.delegateCapability({
         signer: invocationSigner,
-        request: delegateEdvKakRequest
+        request: delegateEdvKakZcapRequest
       })
     ]);
 

@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 14.0.0 - 2022-03-xx
+
+### Changed
+- **BREAKING**: Update root profile agent zcap TTLs to be 1y.
+
 ## 13.1.0 - 2022-03-17
 
 ### Added
