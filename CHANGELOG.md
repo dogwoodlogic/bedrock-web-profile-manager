@@ -1,9 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 13.1.0 - 2022-03-xx
+## 13.1.0 - 2022-03-17
 
 ### Added
 - Add key resolver cache.
+- Add dependency `@digitalbazaar/lru-memoize@2.2`.
 
 ## 13.0.0 - 2022-03-01
 
