@@ -64,14 +64,26 @@ bedrock.events.on('bedrock.init', async () => {
   handlers.setUseHandler({handler: ({meter} = {}) => ({meter})});
 });
 
-const brPassport = require('bedrock-passport');
-brPassport.optionallyAuthenticated = (req, res, next) => {
-  req.user = {
-    account: {
-      id: 'urn:uuid:ffaf5d84-7dc2-4f7b-9825-cc8d2e5a5d06',
-    }
+const {passport} = require('bedrock-passport');
+passport.authenticate = (strategyName, options, callback) => {
+  // eslint-disable-next-line no-unused-vars
+  return async function(req, res, next) {
+    req._sessionManager = passport._sm;
+    req.isAuthenticated = req.isAuthenticated || (() => !!req.user);
+    req.login = (user, callback) => {
+      req._sessionManager.logIn(req, user, function(err) {
+        if(err) {
+          req.user = null;
+          return callback(err);
+        }
+        callback();
+      });
+    };
+    const user = {
+      account: {id: 'urn:uuid:ffaf5d84-7dc2-4f7b-9825-cc8d2e5a5d06'}
+    };
+    callback(null, user);
   };
-  next();
 };
 
 require('bedrock-test');
