@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 15.0.0 - 2022-04-xx
+## 15.0.0 - 2022-04-10
 
 ### Changed
 - **BREAKING**: Rename package to `@bedrock/web-profile-manager`.
