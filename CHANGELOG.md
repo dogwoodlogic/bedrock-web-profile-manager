@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 15.0.1 - 2022-04-xx
+## 15.0.1 - 2022-04-11
 
 ### Fixed
 - Fix browser alias in `package.json`.
