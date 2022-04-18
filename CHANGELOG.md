@@ -1,5 +1,10 @@
 # bedrock-web-profile-manager ChangeLog
 
+## 16.0.1 - 2022-04-xx
+
+### Fixed
+- Normalize `allowedAction` to `allowedActions` in delegate API.
+
 ## 16.0.0 - 2022-04-18
 
 ### Added
