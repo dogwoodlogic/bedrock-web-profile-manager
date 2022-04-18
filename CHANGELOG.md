@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 16.0.0 - 2022-04-xx
+## 16.0.0 - 2022-04-18
 
 ### Added
 - Add option to specify an `id` and `mutator` function to the Collection
