@@ -5,10 +5,9 @@
 ### Changed
 - **BREAKING**: Use `@digitalbazaar/edv-client@14` with new blind attribute
   version. This version must be paired against
-  `@digitalbazaar/bedrock-profile@19` and
-  `@digitalbazaar/bedrock-profile-http@18` and is incompatible with previous
-  versions without performing a migration of all EDV documents from blind
-  attribute version 1 to version 2.
+  `@bedrock/profile@19` and `@bedrock/profile-http@18` and is incompatible
+  with previous versions without performing a migration of all EDV documents
+  from blind attribute version 1 to version 2.
 
 ## 16.0.1 - 2022-04-18
 
