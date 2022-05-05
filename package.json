@@ -22,7 +22,7 @@
     "@bedrock/web-profile": "^5.0.0",
     "@digitalbazaar/ed25519-signature-2018": "^2.0.1",
     "@digitalbazaar/ed25519-signature-2020": "^3.0.0",
-    "@digitalbazaar/edv-client": "^13.0.0",
+    "@digitalbazaar/edv-client": "^14.0.0",
     "@digitalbazaar/ezcap": "^2.0.6",
     "@digitalbazaar/http-client": "^2.0.1",
     "@digitalbazaar/lru-memoize": "^2.2.0",

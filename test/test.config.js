@@ -2,6 +2,7 @@
  * Copyright (c) 2019-2022 Digital Bazaar, Inc. All rights reserved.
  */
 import {config} from '@bedrock/core';
+import {createRequire} from 'node:module';
 import path from 'path';
 import '@bedrock/https-agent';
 import '@bedrock/karma';
@@ -11,6 +12,7 @@ import '@bedrock/kms';
 import '@bedrock/kms-http';
 import '@bedrock/profile';
 import '@bedrock/server';
+const require = createRequire(import.meta.url);
 
 config.karma.suites['bedrock-web-kms'] = path.join('web', '**', '*.js');
 
@@ -20,6 +22,12 @@ config.karma.config.proxies = {
   }
 };
 config.karma.config.proxyValidateSSL = false;
+config.karma.config.webpack.resolve = {
+  // include empty `util` for `sinon`
+  fallback: {
+    util: require.resolve('./util-empty.js')
+  }
+};
 // Enable for rapid unit test development
 // config.karma.config.singleRun = false;
 // config.karma.config.browsers = ['Chrome_special'];
