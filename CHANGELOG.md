@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 17.1.0 - 2022-05-xx
+## 17.1.0 - 2022-05-17
 
 ### Added
 - Add optional cache for profiles and profile agent records. The cache can be
