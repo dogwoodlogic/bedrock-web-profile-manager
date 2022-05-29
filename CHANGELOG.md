@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 17.2.0 - 2022-05-xx
+## 17.2.0 - 2022-05-29
 
 ### Added
 - Add `getProfileIds()` method to fetch profile IDs without fetching
