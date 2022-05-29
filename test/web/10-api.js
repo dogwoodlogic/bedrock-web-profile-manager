@@ -353,6 +353,67 @@ describe('Profile Manager API', () => {
     });
   });
 
+  describe('getProfileIds api', () => {
+    let profileManager;
+    beforeEach(async () => {
+      profileManager = new ProfileManager({
+        edvBaseUrl: EDV_BASE_URL
+      });
+
+      await profileManager.setSession({
+        session: {
+          data: {
+            account: {
+              id: ACCOUNT_ID
+            }
+          },
+          on: () => {},
+        }
+      });
+    });
+    it('should pass', async () => {
+      let error;
+      let result;
+      let profileId;
+      try {
+        ({id: profileId} = await profileManager.createProfile(
+          {didMethod: 'v1', didOptions: {mode: 'test'}}));
+        result = await profileManager.getProfileIds();
+      } catch(e) {
+        error = e;
+      }
+      should.not.exist(error);
+      should.exist(result);
+      should.exist(profileId);
+      result.should.be.an('array');
+      result.length.should.greaterThan(0);
+      profileId.should.equal(result[result.length - 1]);
+    });
+    it('should use cache', async () => {
+      let error;
+      let result1;
+      let result2;
+      try {
+        await profileManager.createProfile(
+          {didMethod: 'v1', didOptions: {mode: 'test'}});
+        result1 = await profileManager.getProfileIds();
+        result2 = await profileManager.getProfileIds({useCache: true});
+      } catch(e) {
+        error = e;
+      }
+      should.not.exist(error);
+      should.exist(result1);
+      should.exist(result2);
+      result1.should.be.an('array');
+      result2.should.be.an('array');
+      result1.length.should.equal(result2.length);
+      result1.length.should.be.greaterThan(0);
+      for(let i = 0; i < result1.length; ++i) {
+        result1[i].should.equal(result2[i]);
+      }
+    });
+  });
+
   describe('getProfileKeystoreAgent api', () => {
     let profileManager;
     beforeEach(async () => {
