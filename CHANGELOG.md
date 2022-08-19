@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 18.0.0 - 2022-xx-xx
+## 18.0.0 - 2022-08-19
 
 ### Changed
 - **BREAKING**: Use `exports` instead of `module`.
