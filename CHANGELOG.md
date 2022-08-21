@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 18.0.1 - 2022-08-xx
+## 18.0.1 - 2022-08-21
 
 ### Fixed
 - Remove `CapabilityAgent.clearCache` call (`CapabilityAgent` no longer has
