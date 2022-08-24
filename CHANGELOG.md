@@ -4,7 +4,7 @@
 
 ### Fixed
 - Remove `CapabilityAgent.clearCache` call (`CapabilityAgent` no longer has
-  a cache.
+  a cache).
 
 ## 18.0.0 - 2022-08-19
 
