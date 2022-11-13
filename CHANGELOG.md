@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 19.0.0 - 2022-11-dd
+## 19.0.0 - 2022-11-13
 
 ### Changed
 - **BREAKING**: Update `ezcap` and signature libraries to get better safe
