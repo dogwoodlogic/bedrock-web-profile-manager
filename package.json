@@ -18,7 +18,7 @@
     "url": "https://github.com/digitalbazaar/bedrock-web-profile-manager"
   },
   "dependencies": {
-    "@bedrock/web-profile": "github:dogwoodlogic/bedrock-web-profile#agent",
+    "@bedrock/web-profile": "7.0.0",
     "@digitalbazaar/ed25519-signature-2018": "^4.0.0",
     "@digitalbazaar/ed25519-signature-2020": "^5.4.0",
     "@digitalbazaar/edv-client": "^16.1.0",
