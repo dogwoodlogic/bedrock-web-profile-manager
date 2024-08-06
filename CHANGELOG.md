@@ -1,6 +1,6 @@
 # bedrock-web-profile-manager ChangeLog
 
-## 21.0.0 - 2024-08-xx
+## 21.0.0 - 2024-08-06
 
 ### Changed
 - **BREAKING**: Update dependencies.
